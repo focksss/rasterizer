@@ -315,8 +315,12 @@ void main() {
         float metallic = thisMtl.Pm;
         float rougness = thisMtl.Pr;
         vec3 N = normal;
+	//ambient occlusion
+	float ao = texture(SSAOtex, texCoord).r;
+	//user-set scene ambient (Sa) approximation
+	float Sa = 0.1;
 
-        vec3 Lo = (albedo * 0.1 * texture(SSAOtex, texCoord).r) + thisMtl.Ke; //ambient preset
+        vec3 Lo = (albedo * Sa * ao) + thisMtl.Ke; //ambient preset
         vec3 V = normalize(camPos - fragPos);
 	//approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
         for (int i = 0; i < int(lightData.length()/lightFields)+1; i++) {
