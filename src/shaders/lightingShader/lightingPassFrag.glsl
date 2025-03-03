@@ -17,18 +17,23 @@ uniform sampler2D SSAOtex;
 uniform vec3 camPos;
 uniform vec3 camRot;
 
+//raw mtl data
 layout(std430, binding = 0) buffer mtlBuffer {
     float mtlData[];
 };
+//property maps (bindless)
 layout(std430, binding = 1) buffer handleBuffer {
     sampler2D textures[];
 };
+//raw light data
 layout(std430, binding = 2) buffer lightBuffer {
     float lightData[];
 };
+//light view * projection matrices
 layout(std430, binding = 4) buffer lightSpaceMatrixBuffer {
     mat4 lightSpaceMatrices[];
 };
+//temp single shadowmap
 uniform sampler2D shadowmaps;
 
 int lightFields = 24;
@@ -349,8 +354,5 @@ void main() {
         Lo = Lo/(Lo+vec3(1));
         Lo = pow(Lo, vec3(1/gamma));
         fragColor = vec4(Lo,1);
-
-        //fragColor = vec4(thisNormal*0.5 + 0.5,1);
-        //fragColor = vec4(thisAlbedo,1);
     }
 }
