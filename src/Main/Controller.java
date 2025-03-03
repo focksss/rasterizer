@@ -2,8 +2,19 @@ package Main;
 
 import Datatypes.Shader;
 import Datatypes.Vec;
+import org.lwjgl.system.MemoryUtil;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL12.GL_BGRA;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Controller {
     Vec cameraPos;
@@ -17,7 +28,7 @@ public class Controller {
 
     boolean mouseMode = true;
     boolean firstMouse = true;
-    boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f1WasDown = false;
+    boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f2WasDown = false;
     double lastMouseX = 0;
     double lastMouseY = 0;
 
@@ -97,15 +108,12 @@ public class Controller {
 
         //if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) Run.world.worldObjects.get(1).newInstance(new Vec(1), cameraPos.mult(new Vec(-1,1,-1)), new Vec(0));
         if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) Run.compileShaders();
-        /*
-        if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
-            if (!f1WasDown) {
-                f1WasDown = true;
-                Run.world.modifyLight();
-                Run.world.updateWorld();
+        if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
+            if (!f2WasDown) {
+                f2WasDown = true;
+                screenshot(Run.ppTex);
             }
-        } else {f1WasDown = false;}
-*/
+        } else {f2WasDown = false;}
     }
 
     private void doMouse() {
@@ -135,6 +143,39 @@ public class Controller {
             if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) cameraRot.x += sense;
             if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) cameraRot.y += sense;
             if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) cameraRot.y -= sense;
+        }
+    }
+
+    public void screenshot(int texture) {
+        glBindTexture(GL_TEXTURE_2D, texture);
+        int width = glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH);
+        int height = glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT);
+
+        ByteBuffer imageBuffer = MemoryUtil.memAlloc(width * height * 4);
+        glGetTexImage(GL_TEXTURE_2D, 0 ,GL_RGBA, GL_UNSIGNED_BYTE, imageBuffer);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int i = (x + (height - y - 1) * width) * 4;
+                int r = imageBuffer.get(i) & 0xFF;
+                int g = imageBuffer.get(i + 1) & 0xFF;
+                int b = imageBuffer.get(i + 2) & 0xFF;
+                int a = imageBuffer.get(i + 3) & 0xFF;
+                int argb = (a << 24) | (r << 16) | (g << 8) | b;
+                image.setRGB(x, y, argb);
+            }
+        }
+
+        String timestamp = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date());
+        String folderPath = "screenshots/";
+        String filePath = folderPath + "screenshot_" + timestamp + ".png";
+        File file = new File(filePath);
+        try {
+            ImageIO.write(image, "PNG", file);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
