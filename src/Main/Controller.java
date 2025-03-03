@@ -106,7 +106,6 @@ public class Controller {
         if (glfwGetKey(window, GLFW_KEY_APOSTROPHE) == GLFW_PRESS) Run.GAMMA += 0.01F;
         Run.GAMMA = Math.max(Run.GAMMA, 0);
 
-        //if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) Run.world.worldObjects.get(1).newInstance(new Vec(1), cameraPos.mult(new Vec(-1,1,-1)), new Vec(0));
         if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) Run.compileShaders();
         if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
             if (!f2WasDown) {
