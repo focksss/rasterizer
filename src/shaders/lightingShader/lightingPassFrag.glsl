@@ -273,7 +273,7 @@ void main() {
         vec3 albedo = thisMtl.Kd;
         vec3 normal = thisNormal;
 
-        vec3 lighting = albedo * 0.1 + thisMtl.Ke; //ambient preset
+        vec3 lighting = (albedo * 0.1 * texture(SSAOtex, texCoord).r) + thisMtl.Ke; //ambient preset
         vec3 V = normalize(camPos - fragPos);
         for (int i = 0; i < int(lightData.length()/lightFields)+1; i++) {
             light l = newLight(i);
