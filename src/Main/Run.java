@@ -169,8 +169,6 @@ public class Run {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, screenTex);
         ppShader.setUniform("ppBuffer", 0);
-        ppShader.setUniform("exposure", EXPOSURE);
-        ppShader.setUniform("gamma", GAMMA);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         renderToQuad(ppTex);
@@ -250,6 +248,10 @@ public class Run {
 
         lightingShader.setUniform("camPos", controller.cameraPos);
         lightingShader.setUniform("camRot", controller.cameraRot);
+
+        ppShader.setUniform("exposure", EXPOSURE);
+        ppShader.setUniform("gamma", GAMMA);
+        lightingShader.setUniform("gamma", GAMMA);
 
         updateLine(1, "Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
         updateLine(2, "Rotation: " + String.format("%.2f %.2f %.2f", controller.cameraRot.x, controller.cameraRot.y, controller.cameraRot.z));
