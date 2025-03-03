@@ -1,8 +1,11 @@
 #version 460
 #extension GL_ARB_bindless_texture : require
 #extension GL_ARB_gpu_shader_int64 : require
+const float PI = 3.14159265359;
 out vec4 fragColor;
 in vec2 texCoord;
+
+uniform float gamma;
 
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
@@ -259,6 +262,43 @@ float calculateShadow(light l, vec3 fragPos, vec3 normal) {
 
     return 1-shadow;
 }
+vec3 fresnelSchlick(float cosTheta, vec3 F0)
+{
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}  
+float DistributionGGX(vec3 N, vec3 H, float roughness)
+{
+    float a      = roughness*roughness;
+    float a2     = a*a;
+    float NdotH  = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
+	
+    float num   = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+	
+    return num / denom;
+}
+float GeometrySchlickGGX(float NdotV, float roughness)
+{
+    float r = (roughness + 1.0);
+    float k = (r*r) / 8.0;
+
+    float num   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+	
+    return num / denom;
+}
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
+	
+    return ggx1 * ggx2;
+}
+
 
 void main() {
     vec3 thisNormal = (texture(gNormal, texCoord).rgb - 0.5) * 2;
@@ -272,21 +312,48 @@ void main() {
         vec3 fragPos = thisPosition;
         vec3 albedo = thisMtl.Kd;
         vec3 normal = thisNormal;
+        float metallic = thisMtl.Pm;
+        float rougness = thisMtl.Pr;
+        vec3 N = normal;
+	//ambient occlusion
+	float ao = texture(SSAOtex, texCoord).r;
+	//user-set scene ambient (Sa) approximation
+	float Sa = 0.1;
 
-        vec3 lighting = albedo * 0.1 + thisMtl.Ke; //ambient preset
+        vec3 Lo = (albedo * Sa * ao) + thisMtl.Ke; //ambient preset
         vec3 V = normalize(camPos - fragPos);
+	//approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
         for (int i = 0; i < int(lightData.length()/lightFields)+1; i++) {
             light l = newLight(i);
             vec4 thisLighting = getLighting(l,fragPos);
-            vec3 L = thisLighting.xyz;
-            float atten = thisLighting.w;
-            vec3 diffuse = max(albedo*dot(L, normal)*l.diffuse, 0) * atten;
-            vec3 halfwayDir = normalize(L + V);
-            vec3 specular = l.specular * pow(max(dot(normal, halfwayDir),0),thisMtl.Ns) * atten;
-            //lighting+=(diffuse+specular);
-            lighting+=(diffuse+specular) * calculateShadow(l, fragPos, normal);
+	    float atten = thisLighting.w;
+
+            vec3 Wi = thisLighting.xyz;
+	    //Wi = vector from frag to light
+            float cosTheta = max(dot(N, Wi), 0);
+	    //angle between normal and Wi
+            vec3 radiance = l.diffuse * atten;
+	    //radiance of the current light
+            vec3 H = normalize(V+Wi);
+	    //halfway between vector to cam and light
+            vec3 F0 = vec3(0.04); 
+            F0 = mix(F0, albedo, metallic);
+            vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+            float NDF = DistributionGGX(N, H, roughness);       
+            float G   = GeometrySmith(N, V, Wi, roughness);
+            vec3 numerator = NDF * G * F;
+            float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, Wi), 0.0)  + 0.0001;
+            vec3 specular = numerator / denominator;
+            vec3 kS = F;
+            vec3 kD = vec3(1.0) - kS;
+            kD *= 1.0 - metallic;
+            float NdotL = max(dot(N, L), 0.0);        
+            Lo += (kD * albedo / PI + specular) * radiance * NdotL;
         }
-        fragColor = vec4(lighting, 1);
+        //gamma correct
+        Lo = Lo/(Lo+vec3(1));
+        Lo = pow(Lo, vec3(1/gamma);
+        fragColor = vec4(Lo,1);
 
         //fragColor = vec4(thisNormal*0.5 + 0.5,1);
         //fragColor = vec4(thisAlbedo,1);
