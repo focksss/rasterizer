@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/rasterizer2.iml" filepath="$PROJECT_DIR$/rasterizer2.iml" />
+      <module fileurl="file://$PROJECT_DIR$/rasterizer.iml" filepath="$PROJECT_DIR$/rasterizer.iml" />
     </modules>
   </component>
 </project>

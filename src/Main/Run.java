@@ -53,7 +53,7 @@ public class Run {
     public static float nearPlane = 0.001f, farPlane = 10000.0f;
     public static Matrix4f projectionMatrix;
     public static String skyboxPath = "C:\\Graphics\\antiDoxxFolder\\thatch_chapel_4k.png";
-    private static final String shaderPath = "C:\\Graphics\\rasterize\\src\\shaders\\";
+    private static final String shaderPath = "C:\\Graphics\\rasterizer\\src\\shaders\\";
 
     public static World world;
     public static Controller controller;
