@@ -319,13 +319,21 @@ void main() {
         vec3 lighting = (albedo * 0.1 * texture(SSAOtex, texCoord).r) + thisMtl.Ke; //ambient preset
         vec3 Lo = (albedo * 0.1 * texture(SSAOtex, texCoord).r) + thisMtl.Ke; //ambient preset
         vec3 V = normalize(camPos - fragPos);
+
+	//approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
         for (int i = 0; i < int(lightData.length()/lightFields)+1; i++) {
             light l = newLight(i);
             vec4 thisLighting = getLighting(l,fragPos);
+	    float atten = thisLighting.w;
+
             vec3 Wi = thisLighting.xyz;
+	    //Wi = vector from frag to light
             float cosTheta = max(dot(N, Wi), 0);
+	    //angle between normal and Wi
             vec3 radiance = l.diffuse * atten;
+	    //radiance of the current light
             vec3 H = normalize(V+Wi);
+	    //halfway between vector to cam and light
             vec3 F0 = vec3(0.04); 
             F0 = mix(F0, albedo, metallic);
             vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
@@ -339,16 +347,7 @@ void main() {
             kD *= 1.0 - metallic;
             float NdotL = max(dot(N, L), 0.0);        
             Lo += (kD * albedo / PI + specular) * radiance * NdotL;
-            
-
-            float atten = thisLighting.w;
-            vec3 diffuse = max(albedo*dot(L, normal)*l.diffuse, 0) * atten;
-            vec3 halfwayDir = normalize(Wi + V);
-            vec3 specular = l.specular * pow(max(dot(normal, halfwayDir),0),thisMtl.Ns) * atten;
-            //lighting+=(diffuse+specular);
-            lighting+=(diffuse+specular) * calculateShadow(l, fragPos, normal);
         }
-        fragColor = vec4(lighting, 1);
         //gamma correct
         Lo = Lo/(Lo+vec3(1));
         Lo = pow(Lo, vec3(1/gamma);
