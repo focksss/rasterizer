@@ -316,10 +316,8 @@ void main() {
         float rougness = thisMtl.Pr;
         vec3 N = normal;
 
-        vec3 lighting = (albedo * 0.1 * texture(SSAOtex, texCoord).r) + thisMtl.Ke; //ambient preset
         vec3 Lo = (albedo * 0.1 * texture(SSAOtex, texCoord).r) + thisMtl.Ke; //ambient preset
         vec3 V = normalize(camPos - fragPos);
-
 	//approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
         for (int i = 0; i < int(lightData.length()/lightFields)+1; i++) {
             light l = newLight(i);
@@ -351,7 +349,7 @@ void main() {
         //gamma correct
         Lo = Lo/(Lo+vec3(1));
         Lo = pow(Lo, vec3(1/gamma);
-        fragColor = Lo;
+        fragColor = vec4(Lo,1);
 
         //fragColor = vec4(thisNormal*0.5 + 0.5,1);
         //fragColor = vec4(thisAlbedo,1);
