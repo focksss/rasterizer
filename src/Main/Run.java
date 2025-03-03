@@ -177,7 +177,7 @@ public class Run {
         glfwPollEvents();
     }
     public static void createWorld() {
-        world.addObject("C:\\Graphics\\assets\\bistro", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        world.addObject("C:\\Graphics\\assets\\sponza", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
         //world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0), new Vec(0), "bistro");
         //world.addObject("C:\\Graphics\\assets\\sponza", new Vec(0.01), new Vec(0), new Vec(0), "bistro");
         world.worldObjects.get(0).newInstance();
