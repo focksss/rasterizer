@@ -304,7 +304,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
 
 void main() {
     vec3 thisNormal = (texture(gNormal, texCoord).rgb - 0.5) * 2;
-    if (thisNormal.length() == 0) {discard;} else {
+    if (thisNormal.length() == 0) {fragColor = vec4(vec3(-1),0); return;} else {
         int thisMtlID = int(texture(gMaterial, texCoord).r*1000);
         vec3 thisPosition = texture(gPosition, texCoord).rgb;
         vec2 thisTexCoord = texture(gTexCoord, texCoord).rg;
