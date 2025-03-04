@@ -44,6 +44,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 
 ## Usage
 Include lwjgl, lwjgl-opengl, lwjgl-stb, lwjgl-glfw, dds-lwjgl-3.0.0, joml
+
 Replace paths to skybox and objects with paths to objects on your computer
 - WASD to move, E and Q for vertical movement
 - F1 to recompile shaders
