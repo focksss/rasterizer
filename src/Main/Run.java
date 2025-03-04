@@ -171,12 +171,12 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, ppFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glDisable(GL_DEPTH_TEST);
-        drawSkybox();
-        glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, lightingTex);
         ppShader.setUniform("ppBuffer", 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, skyboxTex);
+        ppShader.setUniform("skybox", 1);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         renderToQuad(ppTex);
