@@ -9,7 +9,8 @@ uniform float gamma;
 
 
 void main() {
-    vec3 hdrColor = texture(ppBuffer, texCoord).rgb;
+    vec4 c = texture(ppBuffer, texCoord).rgba;
+    vec3 hdrColor = c.rgb;
 
     vec3 mapped = vec3(1.0) - exp(-hdrColor * exposure);
     // gamma correction

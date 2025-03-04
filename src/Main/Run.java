@@ -55,7 +55,7 @@ public class Run {
     public static float aspectRatio = (float) WIDTH / HEIGHT;
     public static float nearPlane = 0.001f, farPlane = 10000.0f;
     public static Matrix4f projectionMatrix;
-    public static String skyboxPath = "C:\\Graphics\\antiDoxxFolder\\thatch_chapel_4k.png";
+    public static String skyboxPath = "C:\\Graphics\\assets\\kloofendal_48d_partly_cloudy_puresky.jpg";
     private static final String shaderPath = "C:\\Graphics\\rasterizer\\src\\shaders\\";
 
     public static World world;
@@ -171,6 +171,9 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, ppFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
+        drawSkybox();
+        glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, screenTex);
         ppShader.setUniform("ppBuffer", 0);
@@ -188,7 +191,7 @@ public class Run {
         world.worldObjects.get(0).newInstance();
 
         Light newLight = new Light(1);
-        newLight.setProperty("direction", new Vec(0.15, -1, -.15));
+        newLight.setProperty("direction", new Vec(.15, -.75, -.5));
         newLight.setProperty("position", new Vec(0.1, 1, 0.05).mult(50));
         newLight.setProperty("cutoff", 0.8);
         newLight.setProperty("innerCutoff", 0.9);
@@ -196,7 +199,7 @@ public class Run {
         newLight.setProperty("linearAttenuation", 0.09);
         newLight.setProperty("quadraticAttenuation", 0.032);
         newLight.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
-        newLight.setProperty("diffuse", new Vec(1, 1, 1));
+        newLight.setProperty("diffuse", new Vec(1, 0.9, 0.5));
         newLight.setProperty("specular", new Vec(1, 1, 1));
         world.addLight(newLight);
 
@@ -575,7 +578,6 @@ public class Run {
 
     private static void renderToQuad(int texture) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glClearColor(1, 1, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         screenShader.useProgram();
         glDisable(GL_DEPTH_TEST);
