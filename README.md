@@ -26,10 +26,16 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Custom vector class (rather than JOML Vec3f)
 - Simple + debug controls
 - Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
+- Simple PBR shading (currently no IBL)
 - Post processing features including:
   - HDR rendering
   - Screen space ambient occlusion
   - Optional kernals for blur, deep-fry
+ 
+## Soon to be added
+- Finish implementing suppot for multiple shadow maps
+- Adding lights at emissive objects during parsing
+- Bloom
 
 ## Usage
 Include lwjgl, lwjgl-opengl, lwjgl-stb, lwjgl-glfw, dds-lwjgl-3.0.0, joml.
