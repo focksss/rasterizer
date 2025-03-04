@@ -3,7 +3,7 @@ My first implementation of a rasterization rendering engine in a real language, 
 
 <img src="https://github.com/user-attachments/assets/76f0623e-f46b-4804-bde3-06f55c9511ea" width="200">
 
-then later on using lwjgl and opengl:
+then later on using lwjgl and openGL:
 <table>
   <tr>
     <td><img src="https://github.com/user-attachments/assets/aad42e58-3034-491a-a3a7-5766ccc8d089" width="200"></td>
