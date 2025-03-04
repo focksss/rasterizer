@@ -33,7 +33,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
   - Optional kernals for blur, deep-fry
  
 ## Soon to be added
-- IBL
+- IBL, irradiance mapping
 - Finish implementing suppot for multiple shadow maps
 - Adding lights at emissive objects during parsing
 - Bloom
