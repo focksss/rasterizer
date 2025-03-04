@@ -40,10 +40,10 @@ public class Run {
             geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, ppShader;
     public static long window, FPS = 240;
 
-    public static float EXPOSURE = 2.75f;
-    public static float GAMMA = 1.15f;
+    public static float EXPOSURE = 10.5f;
+    public static float GAMMA = 1;
     public static boolean doSSAO = true;
-    public static float SSAOradius = 0.1f;
+    public static float SSAOradius = 0.11f;
     public static float SSAObias = 0.05f;
     public static long startTime = System.nanoTime();
     public static long time = 0;
@@ -188,7 +188,7 @@ public class Run {
         world.worldObjects.get(0).newInstance();
 
         Light newLight = new Light(1);
-        newLight.setProperty("direction", new Vec(-0.15, -1, .15));
+        newLight.setProperty("direction", new Vec(0.15, -1, -.15));
         newLight.setProperty("position", new Vec(0.1, 1, 0.05).mult(50));
         newLight.setProperty("cutoff", 0.8);
         newLight.setProperty("innerCutoff", 0.9);
