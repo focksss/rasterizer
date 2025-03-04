@@ -30,7 +30,7 @@ import javax.swing.*;
 
 public class Run {
     public static int
-            screenFBO, screenTex, screenRBO,
+            lightingFBO, lightingTex, lightingRBO,
             gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
             ppFBO, ppTex,
@@ -142,7 +142,7 @@ public class Run {
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         //lighting pass
-        glBindFramebuffer(GL_FRAMEBUFFER, screenFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         lightingShader.useProgram();
@@ -175,7 +175,7 @@ public class Run {
         drawSkybox();
         glEnable(GL_DEPTH_TEST);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, screenTex);
+        glBindTexture(GL_TEXTURE_2D, lightingTex);
         ppShader.setUniform("ppBuffer", 0);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -294,20 +294,20 @@ public class Run {
         compileShaders();
 
 
-        screenFBO = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, screenFBO);
+        lightingFBO = glGenFramebuffers();
+        glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
         glReadBuffer(GL_COLOR_ATTACHMENT0);
-        screenTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, screenTex);
+        lightingTex = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, lightingTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex, 0);
-        screenRBO = glGenRenderbuffers();
-        glBindRenderbuffer(GL_RENDERBUFFER, screenRBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightingTex, 0);
+        lightingRBO = glGenRenderbuffers();
+        glBindRenderbuffer(GL_RENDERBUFFER, lightingRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, screenRBO);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, lightingRBO);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
@@ -434,19 +434,19 @@ public class Run {
         SSAOshader = new Shader(shaderPath + "\\SSAOshader\\SSAOfrag.glsl", shaderPath + "\\quadVertex.glsl");
     }
     public static void scaleToWindow() {
-        glBindFramebuffer(GL_FRAMEBUFFER, screenFBO);
-        glDeleteTextures(screenTex);
-        screenTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, screenTex);
+        glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
+        glDeleteTextures(lightingTex);
+        lightingTex = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, lightingTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex, 0);
-        glDeleteRenderbuffers(screenRBO);
-        screenRBO = glGenRenderbuffers();
-        glBindRenderbuffer(GL_RENDERBUFFER, screenRBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightingTex, 0);
+        glDeleteRenderbuffers(lightingRBO);
+        lightingRBO = glGenRenderbuffers();
+        glBindRenderbuffer(GL_RENDERBUFFER, lightingRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, screenRBO);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, lightingRBO);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
@@ -585,7 +585,7 @@ public class Run {
         glActiveTexture(GL_TEXTURE0);
 
         glBindTexture(GL_TEXTURE_2D, texture);
-        screenShader.setUniform("screenTexture", 0);
+        screenShader.setUniform("lightingTexture", 0);
 
         /*
         glBindTexture(GL_TEXTURE_2D, world.shadowmapArray);
