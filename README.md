@@ -34,6 +34,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
  
 ## Soon to be added
 - IBL, irradiance mapping
+  - Animated HDRI
 - Finish implementing suppot for multiple shadow maps
 - Adding lights at emissive objects during parsing
 - Bloom
