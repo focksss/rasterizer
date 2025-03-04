@@ -29,7 +29,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Simple PBR shading (currently no IBL)
 - Orthographic shadow mapping
 - Post processing features including:
-  - HDR rendering
+  - HDR
   - Screen space ambient occlusion
   - Optional kernals for blur, deep-fry
  
