@@ -6,6 +6,7 @@ out vec4 fragColor;
 in vec2 texCoord;
 
 uniform float gamma;
+uniform bool SSAO;
 
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
@@ -320,7 +321,7 @@ void main() {
         //user-set scene ambient (Sa) approximation
         float Sa = 0.1;
 
-        vec3 Lo = (albedo * Sa * ao) + thisMtl.Ke; //ambient preset
+        vec3 Lo = (albedo * Sa * (SSAO ? ao : 1)) + thisMtl.Ke; //ambient preset
         vec3 V = normalize(camPos - p);
 	    //approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
         for (int i = 0; i < int(lightData.length()/lightFields)+1; i++) {

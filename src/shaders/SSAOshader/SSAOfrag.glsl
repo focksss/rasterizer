@@ -10,11 +10,13 @@ uniform sampler2D texNoise;
 uniform vec3 samples[64];
 
 int kernelSize = 64;
-float radius = 0.5;
-float bias = 0.05;
+uniform float radius;
+uniform float bias;
 
+float width;
+float height;
 // tile noise texture over screen based on screen dimensions divided by noise size
-const vec2 noiseScale = vec2(1920.0/4.0, 1080.0/4.0);
+vec2 noiseScale = vec2(width/4.0, height/4.0);
 
 uniform mat4 projection;
 

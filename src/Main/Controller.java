@@ -28,7 +28,7 @@ public class Controller {
 
     boolean mouseMode = true;
     boolean firstMouse = true;
-    boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f2WasDown = false;
+    boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f1WasDown = false; boolean f2WasDown = false; boolean f3WasDown;
     double lastMouseX = 0;
     double lastMouseY = 0;
 
@@ -105,14 +105,28 @@ public class Controller {
         if (glfwGetKey(window, GLFW_KEY_SEMICOLON) == GLFW_PRESS) Run.GAMMA -= 0.01F;
         if (glfwGetKey(window, GLFW_KEY_APOSTROPHE) == GLFW_PRESS) Run.GAMMA += 0.01F;
         Run.GAMMA = Math.max(Run.GAMMA, 0);
+        if (glfwGetKey(window, GLFW_KEY_F7) == GLFW_PRESS) Run.SSAOradius -= 0.001F;
+        if (glfwGetKey(window, GLFW_KEY_F8) == GLFW_PRESS) Run.SSAOradius += 0.001F;
+        Run.SSAOradius = Math.max(Run.SSAOradius, 0);
 
-        if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) Run.compileShaders();
+        if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
+            if (!f1WasDown) {
+                f1WasDown = true;
+                Run.compileShaders();
+            }
+        } else {f1WasDown = false;}
         if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
             if (!f2WasDown) {
                 f2WasDown = true;
                 screenshot(Run.ppTex);
             }
         } else {f2WasDown = false;}
+        if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS) {
+            if (!f3WasDown) {
+                f3WasDown = true;
+                Run.doSSAO = !Run.doSSAO;
+            }
+        } else {f3WasDown = false;}
     }
 
     private void doMouse() {

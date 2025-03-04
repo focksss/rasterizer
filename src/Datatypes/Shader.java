@@ -64,6 +64,9 @@ public class Shader {
             Vec vec = (Vec) value;
             vec.updateFloats();
             glUniform3f(glGetUniformLocation(program, name), vec.xF, vec.yF, vec.zF);
+        } else if (value instanceof Boolean) {
+            boolean bool = (Boolean) value;
+            glUniform1i(glGetUniformLocation(program, name), bool ? 1 : 0);
         }
     }
     public void setUniformArray(String name, int[] values) {

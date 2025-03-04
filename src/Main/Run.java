@@ -31,7 +31,7 @@ import javax.swing.*;
 public class Run {
     public static int
             screenFBO, screenTex, screenRBO,
-            gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO,
+            gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
             ppFBO, ppTex,
             skyboxTex;
@@ -42,6 +42,9 @@ public class Run {
 
     public static float EXPOSURE = 2.75f;
     public static float GAMMA = 1.15f;
+    public static boolean doSSAO = true;
+    public static float SSAOradius = 0.1f;
+    public static float SSAObias = 0.05f;
     public static long startTime = System.nanoTime();
     public static long time = 0;
 
@@ -112,6 +115,7 @@ public class Run {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
         drawScene(geometryShader);
+
         //ssao generation pass
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -123,7 +127,7 @@ public class Run {
         glBindTexture(GL_TEXTURE_2D, gViewPosition);
         SSAOshader.setUniform("gViewPosition", 0);
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, gNormal);
+        glBindTexture(GL_TEXTURE_2D, gViewNormal);
         SSAOshader.setUniform("gNormal", 1);
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, SSAOnoiseTex);
@@ -136,6 +140,7 @@ public class Run {
         glBindTexture(GL_TEXTURE_2D, SSAOtex);
         blurShader.setUniform("blurInput", 0);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
         //lighting pass
         glBindFramebuffer(GL_FRAMEBUFFER, screenFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
@@ -177,7 +182,7 @@ public class Run {
         glfwPollEvents();
     }
     public static void createWorld() {
-        world.addObject("C:\\Graphics\\assets\\sponza", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        world.addObject("C:\\Graphics\\assets\\bistro", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
         //world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0), new Vec(0), "bistro");
         //world.addObject("C:\\Graphics\\assets\\sponza", new Vec(0.01), new Vec(0), new Vec(0), "bistro");
         world.worldObjects.get(0).newInstance();
@@ -252,11 +257,17 @@ public class Run {
         ppShader.setUniform("exposure", EXPOSURE);
         ppShader.setUniform("gamma", GAMMA);
         lightingShader.setUniform("gamma", GAMMA);
+        lightingShader.setUniform("SSAO", doSSAO);
+        SSAOshader.setUniform("width", WIDTH);
+        SSAOshader.setUniform("height", HEIGHT);
+        SSAOshader.setUniform("radius", SSAOradius);
+        SSAOshader.setUniform("bias", SSAObias);
 
         updateLine(1, "Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
         updateLine(2, "Rotation: " + String.format("%.2f %.2f %.2f", controller.cameraRot.x, controller.cameraRot.y, controller.cameraRot.z));
         updateLine(3, "Exposure: " + EXPOSURE);
         updateLine(4, "Gamma: " + GAMMA);
+        updateLine(5, "SSAO radius: " + SSAOradius);
     }
 
     public static void init() {
@@ -329,7 +340,13 @@ public class Run {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, gViewPosition, 0);
-        int[] gAttachments = new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4};
+        gViewNormal = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, gViewNormal);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, gViewNormal, 0);
+        int[] gAttachments = new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5};
         glDrawBuffers(gAttachments);
         gRBO = glGenRenderbuffers();
         glBindRenderbuffer(GL_RENDERBUFFER, gRBO);

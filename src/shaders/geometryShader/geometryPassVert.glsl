@@ -17,8 +17,9 @@ out vec3 viewFragPos;
 out vec2 vertexTexCoord;
 out vec3 vertexNormal;
 out float vertexMaterial;
-out vec4 test;
 out mat3 TBN;
+out vec3 vertexViewNormal;
+out mat3 viewTBN;
 //layout(std430, binding = 5) buffer FragPosBuffer {
 //    vec4 fragPosLightSpace[];
 //};
@@ -34,12 +35,17 @@ void main() {
     viewFragPos = vec3(viewMatrix * objectMatrix[gl_InstanceID] * vec4(aPos, 1));
     vertexTexCoord = aTexCoords;
     mat3 normalMatrix = mat3(transpose(inverse(objectMatrix[gl_InstanceID])));
+    mat3 viewNormalMatrix = transpose(inverse(mat3(viewMatrix * objectMatrix[gl_InstanceID])));
     vertexNormal = normalize(normalMatrix * aNormal);
+    vertexViewNormal = normalize(viewNormalMatrix * aNormal);
     vertexMaterial = aMaterial;
 
     vec3 T = normalize(normalMatrix * aTangent);
     vec3 B = normalize(normalMatrix * aBitangent);
     TBN = mat3(T, B, vertexNormal);
+    vec3 viewT = normalize(viewNormalMatrix * aTangent);
+    vec3 viewB = normalize(viewNormalMatrix * aBitangent);
+    viewTBN = mat3(viewT, viewB, vertexViewNormal);
 //    vertexNormal = cross(T,B);
 
 //    for (int i = 0; i < lightSpaceMatrices.length(); i++) {
