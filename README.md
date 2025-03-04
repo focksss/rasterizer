@@ -1,5 +1,5 @@
 # Implementation of Rasterization Based Rendering
-My first implementation of a rasterization rendering engine in a real language, did previously [on scratch](https://turbowarp.org/1131546958/fullscreen?hqpen&fps=60). My previous graphics projects were based on raytracing/pathtracing, also majority in "unconventional" languages like [desmos](https://www.desmos.com/calculator/jznxn2yzkt) and, of course, [scratch again](https://scratch.mit.edu/projects/960060994/). Wrote a couple implementations on java, first cpu based: 
+My first implementation of a rasterization rendering engine in a real language, did previously [on scratch](https://turbowarp.org/1131546958/fullscreen?hqpen&fps=60). My previous graphics projects were based on raytracing/pathtracing, also majority in "unconventional" languages like [desmos](https://www.desmos.com/calculator/jznxn2yzkt) and, of course, [scratch again](https://scratch.mit.edu/projects/960060994/). Wrote a couple of these ray based implementations on java, first cpu based: 
 
 <img src="https://github.com/user-attachments/assets/76f0623e-f46b-4804-bde3-06f55c9511ea" width="200">
 
