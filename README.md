@@ -27,6 +27,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Simple + debug controls
 - Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
 - Simple PBR shading (currently no IBL)
+- Orthographic shadow mapping
 - Post processing features including:
   - HDR rendering
   - Screen space ambient occlusion
