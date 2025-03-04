@@ -39,7 +39,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Adding lights at emissive objects during parsing
 - Bloom
 - Skeletal animation
-  - GLTF importing?
+  - gLTF importing?
 
 ## Usage
 Include lwjgl, lwjgl-opengl, lwjgl-stb, lwjgl-glfw, dds-lwjgl-3.0.0, joml.
