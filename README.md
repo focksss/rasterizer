@@ -25,7 +25,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Custom .obj and .mtl parser
 - Custom vector class (rather than JOML Vec3f)
 - Simple + debug controls
-- Rendering pipeline allowing for live recompiling, adding objects, object instances, lights, etc.
+- Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
 - Post processing features including:
   - HDR rendering
   - Screen space ambient occlusion
