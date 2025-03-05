@@ -1,10 +1,10 @@
 #version 460
 const float PI = 3.14159265359;
 layout (location = 0) out vec4 fragColor;
-layout (location = 1) out vec4 bloomColor;
 in vec2 texCoord;
 
 uniform sampler2D ppBuffer;
+uniform sampler2D bloomTex;
 uniform sampler2D skybox;
 
 uniform float exposure;
@@ -54,8 +54,8 @@ vec3 rotate(vec3 p, vec3 rot) {
 void main() {
     vec4 c = texture(ppBuffer, texCoord).rgba;
     if (c.a == 1) {
-        vec3 hdrColor = c.rgb;
-    
+        vec3 hdrColor = c.rgb + texture(bloomTex, texCoord).rgb;
+
         vec3 mapped = vec3(1.0) - exp(-hdrColor * exposure);
         // gamma correction
         mapped = pow(mapped, vec3(1.0 / gamma));
@@ -76,12 +76,5 @@ void main() {
         float v = asin(vDir.y) / PI + 0.5;
 
         fragColor = vec4(vDir, 1.0);
-
-        float brightness = dot(fragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-        if (brightness > 1) {
-            bloomColor = fragColor;
-        } else {
-            bloomColor = vec4(0,0,0,1);
-        }
     }
 }
