@@ -355,7 +355,7 @@ void main() {
             float NdotL = max(dot(N, Wi), 0.0);
             Lo += (kD * albedo / PI + specular) * radiance * NdotL * calculateShadow(l, p, N);
         }
-	float brightness = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
+	float brightness = length(Lo);
         if (brightness > 1) {
             bloomColor = vec4(Lo,1);
         } else {

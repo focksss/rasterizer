@@ -34,10 +34,12 @@ public class Run {
             gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
             postProcessingFBO, postProcessingTex, bloomTex,
-            skyboxTex;
+            skyboxTex,
+            gaussianBlurTexOneHalf, gaussianBlurTex;
+    private static int[] gaussianBlurFBO;
     private static Vec[] SSAOkernal;
     public static Shader
-            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, finalImageShader;
+            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader;
     public static long window, FPS = 240;
 
     public static float EXPOSURE = 10.5f;
@@ -107,7 +109,7 @@ public class Run {
     }
 
     public static void createWorld() {
-        world.addObject("C:\\Graphics\\assets\\sponza", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        world.addObject("C:\\Graphics\\assets\\bistro", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
         //world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0), new Vec(0), "bistro");
         //world.addObject("C:\\Graphics\\assets\\sponza", new Vec(0.01), new Vec(0), new Vec(0), "bistro");
         world.worldObjects.get(0).newInstance();
@@ -207,13 +209,7 @@ public class Run {
         glDisable(GL_FRAMEBUFFER_SRGB);
         
         //blur bloom pass (replace this with a gaussian blur fbo)
-        glBindFramebuffer(GL_FRAMEBUFFER, SSAOblurFBO);
-        glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, bloomTex);
-        blurShader.setUniform("blurInput", 0);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        
+        gaussianBlur(bloomTex);
         //
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
@@ -226,7 +222,7 @@ public class Run {
         postProcessingShader.setUniform("skybox", 1);
         glActiveTexture(GL_TEXTURE2);
         //replace this texture with new guassian blur texture later
-        glBindTexture(GL_TEXTURE_2D, SSAOblurTex);
+        glBindTexture(GL_TEXTURE_2D, gaussianBlurTex);
         postProcessingShader.setUniform("bloomTex", 2);
         postProcessingShader.setUniform("camRot", controller.cameraRot);
         postProcessingShader.setUniform("FOV", FOV);
@@ -329,7 +325,7 @@ public class Run {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTex, 0);
-        glDrawBuffer(new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
+        glDrawBuffers(new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
         lightingRBO = glGenRenderbuffers();
         glBindRenderbuffer(GL_RENDERBUFFER, lightingRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
@@ -419,6 +415,25 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         generateSSAOsampling();
 
+        gaussianBlurFBO = new int[2];
+        for (int i = 0; i < 2; i++)
+        {
+            gaussianBlurFBO[i] = glGenFramebuffers();
+            glBindFramebuffer(GL_FRAMEBUFFER, gaussianBlurFBO[i]);
+            glDrawBuffer(GL_COLOR_ATTACHMENT0);
+            if (i == 0) {gaussianBlurTexOneHalf = glGenTextures();} else {gaussianBlurTex = glGenTextures();}
+            glBindTexture(GL_TEXTURE_2D, (i == 0) ? gaussianBlurTexOneHalf : gaussianBlurTex);
+            glTexImage2D(
+                    GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL
+            );
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, (i == 0) ? gaussianBlurTexOneHalf : gaussianBlurTex, 0);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
@@ -452,12 +467,13 @@ public class Run {
     public static void compileShaders() {
         skyboxShader = new Shader(shaderPath + "\\skyboxShader\\skyboxFrag.glsl", shaderPath + "\\quadVertex.glsl");
         geometryShader = new Shader(shaderPath + "\\geometryShader\\geometryPassFrag.glsl", shaderPath + "\\geometryShader\\geometryPassVert.glsl");
-        shadowShader = new Shader(shaderPath + "\\ShadowMapostProcessinging\\shadowmapFrag.glsl", shaderPath + "\\ShadowMapostProcessinging\\shadowmapVert.glsl");
+        shadowShader = new Shader(shaderPath + "\\ShadowMapping\\shadowmapFrag.glsl", shaderPath + "\\ShadowMapping\\shadowmapVert.glsl");
         screenShader = new Shader(shaderPath + "\\quadShader\\quadFrag.glsl", shaderPath + "\\quadVertex.glsl");
         lightingShader = new Shader(shaderPath + "\\lightingShader\\lightingPassFrag.glsl", shaderPath + "\\quadVertex.glsl");
         postProcessingShader = new Shader(shaderPath + "\\postProcessingShader\\postProcessingShaderFrag.glsl", shaderPath + "\\quadVertex.glsl");
         blurShader = new Shader(shaderPath + "\\blurShader\\blurFrag.glsl", shaderPath + "\\quadVertex.glsl");
         SSAOshader = new Shader(shaderPath + "\\SSAOshader\\SSAOfrag.glsl", shaderPath + "\\quadVertex.glsl");
+        gaussianBlurShader = new Shader(shaderPath + "\\gaussianBlurShader\\gaussianBlurFrag.glsl", shaderPath + "\\quadVertex.glsl");
     }
     public static void scaleToWindow() {
         glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
@@ -548,6 +564,18 @@ public class Run {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSAOblurTex, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         generateSSAOsampling();
+    }
+
+    private static void gaussianBlur(int texture) {
+        for (int i = 0; i < 2; i++) {
+            glBindFramebuffer(GL_FRAMEBUFFER, gaussianBlurFBO[i]);
+            glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, (i == 0) ? texture : gaussianBlurTexOneHalf);
+            gaussianBlurShader.setUniform("blurInput", 0);
+            gaussianBlurShader.setUniform("horizontal", i);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
     }
 
     private static void generateSSAOsampling() {

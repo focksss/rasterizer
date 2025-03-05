@@ -118,7 +118,7 @@ public class Controller {
         if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
             if (!f2WasDown) {
                 f2WasDown = true;
-                screenshot(Run.ppTex);
+                screenshot(Run.postProcessingTex);
             }
         } else {f2WasDown = false;}
         if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS) {
