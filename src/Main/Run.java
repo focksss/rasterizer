@@ -55,7 +55,7 @@ public class Run {
     public static float aspectRatio = (float) WIDTH / HEIGHT;
     public static float nearPlane = 0.001f, farPlane = 10000.0f;
     public static Matrix4f projectionMatrix;
-    public static String skyboxPath = "C:\\Graphics\\assets\\kloofendal_48d_partly_cloudy_puresky.jpg";
+    public static String skyboxPath = "C:\\Graphics\\assets\\belfast_sunset.jpg";
     private static final String shaderPath = "C:\\Graphics\\rasterizer\\src\\shaders\\";
 
     public static World world;
@@ -106,13 +106,50 @@ public class Run {
         glfwTerminate();
     }
 
+    public static void createWorld() {
+        world.addObject("C:\\Graphics\\assets\\sponza", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        //world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0), new Vec(0), "bistro");
+        //world.addObject("C:\\Graphics\\assets\\sponza", new Vec(0.01), new Vec(0), new Vec(0), "bistro");
+        world.worldObjects.get(0).newInstance();
+
+        Light newLight = new Light(1);
+        newLight.setProperty("direction", new Vec(.15, -.75, -.5));
+        newLight.setProperty("position", new Vec(0.1, 1, 0.05).mult(50));
+        newLight.setProperty("cutoff", 0.8);
+        newLight.setProperty("innerCutoff", 0.9);
+        newLight.setProperty("constantAttenuation", 1);
+        newLight.setProperty("linearAttenuation", 0.09);
+        newLight.setProperty("quadraticAttenuation", 0.032);
+        newLight.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
+        newLight.setProperty("diffuse", new Vec(1, 0.9, 0.5));
+        newLight.setProperty("specular", new Vec(1, 1, 1));
+        world.addLight(newLight);
+
+/*
+        Light newLight = new Light(3);
+        newLight.setProperty("direction", new Vec(-0.5, -1, -0.15));
+        newLight.setProperty("position", new Vec(0.1, 1, 0.05).mult(50));
+        newLight.setProperty("cutoff", 0.8);
+        newLight.setProperty("innerCutoff", 0.9);
+        newLight.setProperty("constantAttenuation", 1);
+        newLight.setProperty("linearAttenuation", 0.09);
+        newLight.setProperty("quadraticAttenuation", 0.032);
+        newLight.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
+        newLight.setProperty("diffuse", new Vec(1, 1, 1));
+        newLight.setProperty("specular", new Vec(1, 1, 1));
+
+        world.addLight(newLight);
+*/
+
+    }
     public static void render() {
         generateShadowMaps();
         //geometry pass
         glBindFramebuffer(GL_FRAMEBUFFER, gFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
-        glClearColor(0.0f, 0.0f, 0.0f, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glClearColor(0.0f, 0.0f, 0.0f, -1);
+        glClearTexImage(gPosition, 0, GL_RGBA, GL_FLOAT, new float[]{Float.POSITIVE_INFINITY,0,0,0});
         glEnable(GL_DEPTH_TEST);
         drawScene(geometryShader);
 
@@ -176,6 +213,8 @@ public class Run {
         ppShader.setUniform("ppBuffer", 0);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, skyboxTex);
+        ppShader.setUniform("camRot", controller.cameraRot);
+        ppShader.setUniform("FOV", FOV);
         ppShader.setUniform("skybox", 1);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -184,42 +223,7 @@ public class Run {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-    public static void createWorld() {
-        world.addObject("C:\\Graphics\\assets\\bistro", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        //world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0), new Vec(0), "bistro");
-        //world.addObject("C:\\Graphics\\assets\\sponza", new Vec(0.01), new Vec(0), new Vec(0), "bistro");
-        world.worldObjects.get(0).newInstance();
 
-        Light newLight = new Light(1);
-        newLight.setProperty("direction", new Vec(.15, -.75, -.5));
-        newLight.setProperty("position", new Vec(0.1, 1, 0.05).mult(50));
-        newLight.setProperty("cutoff", 0.8);
-        newLight.setProperty("innerCutoff", 0.9);
-        newLight.setProperty("constantAttenuation", 1);
-        newLight.setProperty("linearAttenuation", 0.09);
-        newLight.setProperty("quadraticAttenuation", 0.032);
-        newLight.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
-        newLight.setProperty("diffuse", new Vec(1, 0.9, 0.5));
-        newLight.setProperty("specular", new Vec(1, 1, 1));
-        world.addLight(newLight);
-
-/*
-        Light newLight = new Light(3);
-        newLight.setProperty("direction", new Vec(-0.5, -1, -0.15));
-        newLight.setProperty("position", new Vec(0.1, 1, 0.05).mult(50));
-        newLight.setProperty("cutoff", 0.8);
-        newLight.setProperty("innerCutoff", 0.9);
-        newLight.setProperty("constantAttenuation", 1);
-        newLight.setProperty("linearAttenuation", 0.09);
-        newLight.setProperty("quadraticAttenuation", 0.032);
-        newLight.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
-        newLight.setProperty("diffuse", new Vec(1, 1, 1));
-        newLight.setProperty("specular", new Vec(1, 1, 1));
-
-        world.addLight(newLight);
-*/
-
-    }
     public static void updateWorldObjectInstances() {
 /*
         world.worldObjects.get(0).setInstance(0,
@@ -259,6 +263,8 @@ public class Run {
 
         ppShader.setUniform("exposure", EXPOSURE);
         ppShader.setUniform("gamma", GAMMA);
+        ppShader.setUniform("width", WIDTH);
+        ppShader.setUniform("height", HEIGHT);
         lightingShader.setUniform("gamma", GAMMA);
         lightingShader.setUniform("SSAO", doSSAO);
         SSAOshader.setUniform("width", WIDTH);
@@ -300,9 +306,9 @@ public class Run {
         glReadBuffer(GL_COLOR_ATTACHMENT0);
         lightingTex = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, lightingTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, MemoryUtil.NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightingTex, 0);
         lightingRBO = glGenRenderbuffers();
         glBindRenderbuffer(GL_RENDERBUFFER, lightingRBO);
@@ -556,10 +562,8 @@ public class Run {
     public static void initSkybox(String imagePath) {
         skyboxTex = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, skyboxTex);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTextureParameteri(skyboxTex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);  // No mipmaps, just linear filtering
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         IntBuffer width = MemoryUtil.memAllocInt(1);
         IntBuffer height = MemoryUtil.memAllocInt(1);
         IntBuffer channels = MemoryUtil.memAllocInt(1);
