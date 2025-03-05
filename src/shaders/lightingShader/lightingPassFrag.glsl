@@ -2,7 +2,8 @@
 #extension GL_ARB_bindless_texture : require
 #extension GL_ARB_gpu_shader_int64 : require
 const float PI = 3.14159265359;
-out vec4 fragColor;
+layout (location = 0) out vec4 fragColor;
+layout (location = 1) out vec4 bloomColor;
 in vec2 texCoord;
 
 uniform float gamma;
@@ -354,9 +355,15 @@ void main() {
             float NdotL = max(dot(N, Wi), 0.0);
             Lo += (kD * albedo / PI + specular) * radiance * NdotL * calculateShadow(l, p, N);
         }
-        //gamma correct
-        Lo = Lo/(Lo+vec3(1));
-        Lo = pow(Lo, vec3(1/gamma));
+	float brightness = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
+        if (brightness > 1) {
+            bloomColor = vec4(Lo,1);
+        } else {
+            bloomColor = vec4(0,0,0,1);
+        }
+	//gamma correct
+        //Lo = Lo/(Lo+vec3(1));
+        //Lo = pow(Lo, vec3(1/gamma));
         fragColor = vec4(Lo,1);
     }
 }

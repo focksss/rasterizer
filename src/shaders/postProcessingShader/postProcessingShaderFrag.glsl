@@ -4,6 +4,7 @@ layout (location = 0) out vec4 fragColor;
 in vec2 texCoord;
 
 uniform sampler2D ppBuffer;
+uniform sampler2D bloomTex;
 uniform sampler2D skybox;
 
 uniform float exposure;
@@ -53,8 +54,8 @@ vec3 rotate(vec3 p, vec3 rot) {
 void main() {
     vec4 c = texture(ppBuffer, texCoord).rgba;
     if (c.a == 1) {
-        vec3 hdrColor = c.rgb;
-    
+        vec3 hdrColor = c.rgb + texture(bloomTex, texCoord).rgb;
+
         vec3 mapped = vec3(1.0) - exp(-hdrColor * exposure);
         // gamma correction
         mapped = pow(mapped, vec3(1.0 / gamma));
