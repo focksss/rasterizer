@@ -34,7 +34,6 @@ public class Run {
             gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
             postProcessingFBO, postProcessingTex, bloomTex,
-            finalImageFBO, finalImageTex,
             skyboxTex;
     private static Vec[] SSAOkernal;
     public static Shader
@@ -171,6 +170,7 @@ public class Run {
         glBindTexture(GL_TEXTURE_2D, SSAOnoiseTex);
         SSAOshader.setUniform("texNoise", 2);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+        
         //ssao blur pass
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOblurFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -205,7 +205,16 @@ public class Run {
         glEnable(GL_FRAMEBUFFER_SRGB);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glDisable(GL_FRAMEBUFFER_SRGB);
-
+        
+        //blur bloom pass (replace this with a gaussian blur fbo)
+        glBindFramebuffer(GL_FRAMEBUFFER, SSAOblurFBO);
+        glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, bloomTex);
+        blurShader.setUniform("blurInput", 0);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        
+        //
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -214,11 +223,16 @@ public class Run {
         postProcessingShader.setUniform("postProcessingBuffer", 0);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, skyboxTex);
+        postProcessingShader.setUniform("skybox", 1);
+        glActiveTexture(GL_TEXTURE2);
+        //replace this texture with new guassian blur texture later
+        glBindTexture(GL_TEXTURE_2D, SSAOblurTex);
+        postProcessingShader.setUniform("bloomTex", 2);
         postProcessingShader.setUniform("camRot", controller.cameraRot);
         postProcessingShader.setUniform("FOV", FOV);
         postProcessingShader.setUniform("skybox", 1);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-
+        
         renderToQuad(postProcessingTex);
 
         glfwSwapBuffers(window);
@@ -303,14 +317,19 @@ public class Run {
 
         lightingFBO = glGenFramebuffers();
         glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
-        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
         lightingTex = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, lightingTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, MemoryUtil.NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightingTex, 0);
+        bloomTex = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, bloomTex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTex, 0);
+        glDrawBuffer(new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
         lightingRBO = glGenRenderbuffers();
         glBindRenderbuffer(GL_RENDERBUFFER, lightingRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
@@ -372,23 +391,6 @@ public class Run {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postProcessingTex, 0);
-        bloomTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, bloomTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTex, 0);
-        glDrawBuffer(new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        finalImageFBO = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, finalImageFBO);
-        finalImageTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, finalImageTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, finalImageTex, 0);
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
