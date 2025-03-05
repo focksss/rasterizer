@@ -362,8 +362,8 @@ void main() {
             bloomColor = vec4(0,0,0,1);
         }
 	//gamma correct
-        Lo = Lo/(Lo+vec3(1));
-        Lo = pow(Lo, vec3(1/gamma));
+        //Lo = Lo/(Lo+vec3(1));
+        //Lo = pow(Lo, vec3(1/gamma));
         fragColor = vec4(Lo,1);
     }
 }
