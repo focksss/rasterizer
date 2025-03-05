@@ -18,7 +18,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 
 
 ## Latest Screenshot
-<img src="https://github.com/user-attachments/assets/eca83694-6cad-4fdb-b8f0-b11bb39a06d8" width="1080">
+<img src="https://github.com/user-attachments/assets/e69dea02-0935-48de-a0f8-a3f2bff28717" width="1080">
 
 
 ## Current Features
@@ -30,11 +30,11 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Orthographic shadow mapping
 - Post processing features including:
   - HDR
+  - Bloom
   - Screen space ambient occlusion
   - Optional kernals for blur, deep-fry
  
 ## Soon to be added
-- Bloom
 - Screen space reflections
 - IBL, irradiance mapping
   - Animated HDRI
