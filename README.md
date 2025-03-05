@@ -34,11 +34,12 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
   - Optional kernals for blur, deep-fry
  
 ## Soon to be added
+- Bloom
+- Screen space reflections
 - IBL, irradiance mapping
   - Animated HDRI
 - Finish implementing support for multiple shadow maps
 - Adding lights at emissive objects during parsing
-- Bloom
 - Skeletal animation
   - gLTF importing?
 
