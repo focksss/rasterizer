@@ -83,8 +83,8 @@ public class Controller {
             cameraPos.x -= (float) (speed * Math.cos(cameraRot.y));
             cameraPos.z += (float) (speed * Math.sin(cameraRot.y));
         }
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cameraPos.y -= speed;
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cameraPos.y += speed;
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cameraPos.y -= speed;
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) cameraPos.y += speed;
 
         if (glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS) {
             if (!minusWasDown) {

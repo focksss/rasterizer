@@ -76,5 +76,6 @@ void main() {
         float v = asin(vDir.y) / PI + 0.5;
 
         fragColor = vec4(vDir, 1.0);
+        fragColor = texture(skybox, vec2(u,1-v));
     }
 }
