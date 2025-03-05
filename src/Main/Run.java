@@ -33,11 +33,12 @@ public class Run {
             lightingFBO, lightingTex, lightingRBO,
             gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
-            ppFBO, ppTex,
+            postProcessingFBO, postProcessingTex, bloomTex,
+            finalImageFBO, finalImageTex,
             skyboxTex;
     private static Vec[] SSAOkernal;
     public static Shader
-            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, ppShader;
+            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, finalImageShader;
     public static long window, FPS = 240;
 
     public static float EXPOSURE = 10.5f;
@@ -205,20 +206,20 @@ public class Run {
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glDisable(GL_FRAMEBUFFER_SRGB);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, ppFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, lightingTex);
-        ppShader.setUniform("ppBuffer", 0);
+        postProcessingShader.setUniform("postProcessingBuffer", 0);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, skyboxTex);
-        ppShader.setUniform("camRot", controller.cameraRot);
-        ppShader.setUniform("FOV", FOV);
-        ppShader.setUniform("skybox", 1);
+        postProcessingShader.setUniform("camRot", controller.cameraRot);
+        postProcessingShader.setUniform("FOV", FOV);
+        postProcessingShader.setUniform("skybox", 1);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        renderToQuad(ppTex);
+        renderToQuad(postProcessingTex);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -261,10 +262,10 @@ public class Run {
         lightingShader.setUniform("camPos", controller.cameraPos);
         lightingShader.setUniform("camRot", controller.cameraRot);
 
-        ppShader.setUniform("exposure", EXPOSURE);
-        ppShader.setUniform("gamma", GAMMA);
-        ppShader.setUniform("width", WIDTH);
-        ppShader.setUniform("height", HEIGHT);
+        postProcessingShader.setUniform("exposure", EXPOSURE);
+        postProcessingShader.setUniform("gamma", GAMMA);
+        postProcessingShader.setUniform("width", WIDTH);
+        postProcessingShader.setUniform("height", HEIGHT);
         lightingShader.setUniform("gamma", GAMMA);
         lightingShader.setUniform("SSAO", doSSAO);
         SSAOshader.setUniform("width", WIDTH);
@@ -363,17 +364,34 @@ public class Run {
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gRBO);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        ppFBO = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, ppFBO);
-        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
-        ppTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, ppTex);
+        postProcessingFBO = glGenFramebuffers();
+        glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
+        postProcessingTex = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, postProcessingTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ppTex, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postProcessingTex, 0);
+        bloomTex = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, bloomTex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTex, 0);
+        glDrawBuffer(new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        finalImageFBO = glGenFramebuffers();
+        glBindFramebuffer(GL_FRAMEBUFFER, finalImageFBO);
+        finalImageTex = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, finalImageTex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, finalImageTex, 0);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
 
         SSAOfbo = glGenFramebuffers();
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);
@@ -432,10 +450,10 @@ public class Run {
     public static void compileShaders() {
         skyboxShader = new Shader(shaderPath + "\\skyboxShader\\skyboxFrag.glsl", shaderPath + "\\quadVertex.glsl");
         geometryShader = new Shader(shaderPath + "\\geometryShader\\geometryPassFrag.glsl", shaderPath + "\\geometryShader\\geometryPassVert.glsl");
-        shadowShader = new Shader(shaderPath + "\\ShadowMapping\\shadowmapFrag.glsl", shaderPath + "\\ShadowMapping\\shadowmapVert.glsl");
+        shadowShader = new Shader(shaderPath + "\\ShadowMapostProcessinging\\shadowmapFrag.glsl", shaderPath + "\\ShadowMapostProcessinging\\shadowmapVert.glsl");
         screenShader = new Shader(shaderPath + "\\quadShader\\quadFrag.glsl", shaderPath + "\\quadVertex.glsl");
         lightingShader = new Shader(shaderPath + "\\lightingShader\\lightingPassFrag.glsl", shaderPath + "\\quadVertex.glsl");
-        ppShader = new Shader(shaderPath + "\\postProcessingShader\\postProcessingShaderFrag.glsl", shaderPath + "\\quadVertex.glsl");
+        postProcessingShader = new Shader(shaderPath + "\\postProcessingShader\\postProcessingShaderFrag.glsl", shaderPath + "\\quadVertex.glsl");
         blurShader = new Shader(shaderPath + "\\blurShader\\blurFrag.glsl", shaderPath + "\\quadVertex.glsl");
         SSAOshader = new Shader(shaderPath + "\\SSAOshader\\SSAOfrag.glsl", shaderPath + "\\quadVertex.glsl");
     }
@@ -499,14 +517,14 @@ public class Run {
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gRBO);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, ppFBO);
-        glDeleteTextures(ppTex);
-        ppTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, ppTex);
+        glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
+        glDeleteTextures(postProcessingTex);
+        postProcessingTex = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, postProcessingTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ppTex, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postProcessingTex, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);
