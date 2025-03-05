@@ -30,11 +30,11 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Orthographic shadow mapping
 - Post processing features including:
   - HDR
+  - Bloom
   - Screen space ambient occlusion
   - Optional kernals for blur, deep-fry
  
 ## Soon to be added
-- Bloom
 - Screen space reflections
 - IBL, irradiance mapping
   - Animated HDRI
