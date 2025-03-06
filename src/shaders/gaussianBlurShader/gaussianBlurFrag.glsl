@@ -5,7 +5,14 @@ in vec2 texCoord;
 uniform sampler2D blurInput;
 
 uniform bool horizontal;
-uniform float weight[5] = float[] (0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
+uniform int bloomSamples = 9;
+uniform float weight[9] = float[] (
+0.153170,  // Center pixel
+0.122649, 0.122649,  // First neighbors
+0.091575, 0.091575,  // Second neighbors
+0.061313, 0.061313,  // Third neighbors
+0.031237, 0.031237   // Fourth neighbors
+);
 
 void main()
 {
@@ -13,7 +20,7 @@ void main()
     vec3 result = texture(blurInput, texCoord).rgb * weight[0]; // current fragment's contribution
     if(horizontal)
     {
-        for(int i = 1; i < 5; ++i)
+        for(int i = 1; i < bloomSamples; ++i)
         {
             result += texture(blurInput, texCoord + vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
             result += texture(blurInput, texCoord - vec2(tex_offset.x * i, 0.0)).rgb * weight[i];
@@ -21,7 +28,7 @@ void main()
     }
     else
     {
-        for(int i = 1; i < 5; ++i)
+        for(int i = 1; i < bloomSamples; ++i)
         {
             result += texture(blurInput, texCoord + vec2(0.0, tex_offset.y * i)).rgb * weight[i];
             result += texture(blurInput, texCoord - vec2(0.0, tex_offset.y * i)).rgb * weight[i];

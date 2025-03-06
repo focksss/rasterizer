@@ -1,6 +1,7 @@
 package Main;
 
 import Datatypes.Shader;
+import Util.*;
 import Datatypes.Vec;
 import ModelHandler.Light;
 import org.lwjgl.opengl.GL;
@@ -47,6 +48,10 @@ public class Run {
     public static boolean doSSAO = true;
     public static float SSAOradius = 0.11f;
     public static float SSAObias = 0.05f;
+    public static float bloomRadius = 1f;
+    public static float bloomIntensity = 0.5f;
+    public static float bloomThreshold = 1f;
+
     public static long startTime = System.nanoTime();
     public static long time = 0;
 
@@ -70,6 +75,11 @@ public class Run {
 
     public static void main(String[] args) {
         init();
+        runEngine();
+        //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/outputTextures");
+        //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/bistro.mtl");
+    }
+    public static void runEngine() {
         controller = new Controller(new Vec(0), new Vec(0), window);
         world = new World();
         createWorld();
@@ -204,6 +214,10 @@ public class Run {
         glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_2D, SSAOblurTex);
         lightingShader.setUniform("SSAOtex", 5);
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, skyboxTex);
+        lightingShader.setUniform("skybox", 6);
+        lightingShader.setUniform("FOV", FOV);
         glEnable(GL_FRAMEBUFFER_SRGB);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glDisable(GL_FRAMEBUFFER_SRGB);
@@ -217,15 +231,10 @@ public class Run {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, lightingTex);
         postProcessingShader.setUniform("postProcessingBuffer", 0);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, skyboxTex);
-        postProcessingShader.setUniform("skybox", 1);
         glActiveTexture(GL_TEXTURE2);
         //replace this texture with new guassian blur texture later
         glBindTexture(GL_TEXTURE_2D, gaussianBlurTex);
         postProcessingShader.setUniform("bloomTex", 2);
-        postProcessingShader.setUniform("camRot", controller.cameraRot);
-        postProcessingShader.setUniform("FOV", FOV);
         postProcessingShader.setUniform("skybox", 1);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         
@@ -274,9 +283,8 @@ public class Run {
 
         postProcessingShader.setUniform("exposure", EXPOSURE);
         postProcessingShader.setUniform("gamma", GAMMA);
-        postProcessingShader.setUniform("width", WIDTH);
-        postProcessingShader.setUniform("height", HEIGHT);
-        lightingShader.setUniform("gamma", GAMMA);
+        lightingShader.setUniform("width", WIDTH);
+        lightingShader.setUniform("height", HEIGHT);
         lightingShader.setUniform("SSAO", doSSAO);
         SSAOshader.setUniform("width", WIDTH);
         SSAOshader.setUniform("height", HEIGHT);

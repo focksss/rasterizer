@@ -6,7 +6,6 @@ layout (location = 0) out vec4 fragColor;
 layout (location = 1) out vec4 bloomColor;
 in vec2 texCoord;
 
-uniform float gamma;
 uniform bool SSAO;
 
 uniform sampler2D gPosition;
@@ -18,6 +17,12 @@ uniform sampler2D SSAOtex;
 
 uniform vec3 camPos;
 uniform vec3 camRot;
+
+uniform float FOV;
+uniform sampler2D skybox;
+uniform int width;
+uniform int height;
+
 
 //raw mtl data
 layout(std430, binding = 0) buffer mtlBuffer {
@@ -302,11 +307,27 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
     return ggx1 * ggx2;
 }
 
+vec3 getSkyboxCol() {
+    vec2 uv = texCoord * 2.0 - 1.0;
+    uv.x *= width / height;
+
+    //compute view direction before rotation
+    float fovRadians = FOV * (PI / 180.0);
+    vec3 vDir = normalize(vec3(uv, -1.0 / tan(fovRadians * 0.5)));
+
+    vDir = rotate(vDir, camRot*vec3(-1,1,1));
+
+    //convert to equirectangular uv mapping
+    float u = atan(vDir.z, vDir.x) / (2.0 * PI) + 0.5;
+    float v = asin(vDir.y) / PI + 0.5;
+
+    return texture(skybox, vec2(u,1-v)).rgb;
+}
 
 void main() {
     vec4 initSample = texture(gPosition, texCoord).rgba;
     if (isinf(initSample.r)) {
-        fragColor = vec4(0);
+        fragColor = vec4(getSkyboxCol(),1);
     } else {
         vec3 thisPosition = initSample.rgb;
         vec3 thisNormal = (texture(gNormal, texCoord).rgb - 0.5) * 2;
@@ -344,7 +365,7 @@ void main() {
             vec3 F0 = vec3(0.04); 
             F0 = mix(F0, albedo, metallic);
             vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
-            float NDF = DistributionGGX(N, H, roughness);       
+            float NDF = DistributionGGX(N, H, roughness);
             float G   = GeometrySmith(N, V, Wi, roughness);
             vec3 numerator = NDF * G * F;
             float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, Wi), 0.0)  + 0.0001;
@@ -355,7 +376,7 @@ void main() {
             float NdotL = max(dot(N, Wi), 0.0);
             Lo += (kD * albedo / PI + specular) * radiance * NdotL * calculateShadow(l, p, N);
         }
-	float brightness = length(Lo);
+	float brightness = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
         if (brightness > 1) {
             bloomColor = vec4(Lo,1);
         } else {
