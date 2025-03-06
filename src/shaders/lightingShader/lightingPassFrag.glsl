@@ -344,6 +344,8 @@ void main() {
         float ao = texture(SSAOtex, texCoord).r;
         //user-set scene ambient (Sa) approximation
         float Sa = 0.1;
+	vec3 F0 = vec3(0.04); 
+        F0 = mix(F0, albedo, metallic);
 
         vec3 Lo = (albedo * Sa * (SSAO ? ao : 1)) + thisMtl.Ke; //ambient preset
         vec3 V = normalize(camPos - p);
@@ -361,8 +363,6 @@ void main() {
 	        //radiance of the current light
             vec3 H = normalize(V+Wi);
 	        //halfway between vector to cam and light
-            vec3 F0 = vec3(0.04); 
-            F0 = mix(F0, albedo, metallic);
             vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
             float NDF = DistributionGGX(N, H, roughness);
             float G   = GeometrySmith(N, V, Wi, roughness);
