@@ -18,7 +18,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 
 
 ## Latest Screenshot
-<img src="https://github.com/user-attachments/assets/5603fa15-3b83-4008-8692-a59d7b567fd3" width="1080">
+<img src="https://github.com/focksss/rasterizer/blob/master/screenshots/screenshot_2025_03_06_00_48_58.png" width="1080">
 
 
 
