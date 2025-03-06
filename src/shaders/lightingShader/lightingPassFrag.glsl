@@ -327,7 +327,7 @@ vec3 getSkyboxCol() {
 void main() {
     vec4 initSample = texture(gPosition, texCoord).rgba;
     if (isinf(initSample.r)) {
-        fragColor = vec4(getSkyboxCol(),1);
+        fragColor = vec4(getSkyboxCol()*0.5,1);
     } else {
         vec3 thisPosition = initSample.rgb;
         vec3 thisNormal = (texture(gNormal, texCoord).rgb - 0.5) * 2;
@@ -335,7 +335,6 @@ void main() {
         vec2 thisTexCoord = texture(gTexCoord, texCoord).rg;
         mtl thisMtl = newMtl(thisMtlID);
         thisMtl = mapMtl(thisMtl, thisTexCoord);
-
         vec3 p = thisPosition;
         vec3 albedo = thisMtl.Kd;
         vec3 N = thisNormal;
@@ -374,6 +373,7 @@ void main() {
             vec3 kD = vec3(1.0) - kS;
             kD *= 1.0 - metallic;
             float NdotL = max(dot(N, Wi), 0.0);
+            //Lo += (specular*5) * radiance * NdotL * calculateShadow(l, p, N);
             Lo += (kD * albedo / PI + specular) * radiance * NdotL * calculateShadow(l, p, N);
         }
 	float brightness = dot(Lo, vec3(0.2126, 0.7152, 0.0722));

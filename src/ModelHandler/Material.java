@@ -71,7 +71,7 @@ public class Material {
         this.Density = 1;
         this.illum = 0;
         this.Pm = 0;
-        this.Pr = 1;
+        this.Pr = 0.5;
         this.Ps = 0;
         this.Pc = 0;
         this.Pcr = 0;
