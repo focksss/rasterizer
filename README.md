@@ -18,12 +18,14 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 
 
 ## Latest Screenshot
-<img src="https://github.com/focksss/rasterizer/blob/master/screenshots/screenshot_2025_03_06_00_48_58.png" width="1080">
+<img src="https://github.com/user-attachments/assets/968693a9-045b-474f-9444-acf9f77fd253" width="1080">
+
 
 
 
 ## Current Features
 - Custom .obj and .mtl parser
+  - Light sources auto generate at emissive areas
 - Custom vector class (rather than JOML Vec3f)
 - Simple + debug controls
 - Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
@@ -40,7 +42,6 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - IBL, irradiance mapping
   - Animated HDRI
 - Finish implementing support for multiple shadow maps
-- Adding lights at emissive objects during parsing
 - Skeletal animation
   - gLTF importing?
 
