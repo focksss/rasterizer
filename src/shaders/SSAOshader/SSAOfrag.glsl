@@ -41,11 +41,11 @@ void main() {
         float sampleDepth = texture(gViewPosition, offset.xy).z;
 
         float rangeCheck = smoothstep(0.0, 1.0, radius / abs(fragPos.z - sampleDepth));
-        occlusion += (sampleDepth >= samplePos.z + bias ? 1.0 : 0.0) * rangeCheck;
+        occlusion += min((sampleDepth >= samplePos.z + 0.001 ? 1.0 : 0.0) * rangeCheck ,1);
     }
 
 
-    occlusion = 1.0 - (occlusion / kernelSize);
+    occlusion = 1.0 - ((occlusion*0.5) / kernelSize);
 
     fragColor = vec4(occlusion);
 }

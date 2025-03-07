@@ -32,7 +32,7 @@ uniform mat4 objectMatrix[100];
 void main() {
     gl_Position = projectionMatrix * viewMatrix * objectMatrix[gl_InstanceID] * vec4(aPos, 1.0);
     fragPos = vec3(objectMatrix[gl_InstanceID] * vec4(aPos, 1));
-    viewFragPos = vec3(viewMatrix * objectMatrix[gl_InstanceID] * vec4(aPos, 1));
+    viewFragPos = vec3(1,1,1) * vec3(viewMatrix * objectMatrix[gl_InstanceID] * vec4(aPos, 1));
     vertexTexCoord = aTexCoords;
     mat3 normalMatrix = mat3(transpose(inverse(objectMatrix[gl_InstanceID])));
     mat3 viewNormalMatrix = transpose(inverse(mat3(viewMatrix * objectMatrix[gl_InstanceID])));

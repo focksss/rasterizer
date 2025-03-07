@@ -277,9 +277,9 @@ float calculateShadow(light l, vec3 fragPos, vec3 normal) {
     }
     return 1;
 }
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
-    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-}  
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
 float DistributionGGX(vec3 N, vec3 H, float roughness) {
     float a      = roughness*roughness;
     float a2     = a*a;
@@ -310,19 +310,10 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
     return ggx1 * ggx2;
 }
 
-vec3 getSkyboxCol() {
-    vec2 uv = texCoord * 2.0 - 1.0;
-    uv.x *= width / height;
-
-    //compute view direction before rotation
-    float fovRadians = FOV * (PI / 180.0);
-    vec3 vDir = normalize(vec3(uv, -1.0 / tan(fovRadians * 0.5)));
-
-    vDir = rotate(vDir, camRot*vec3(-1,1,1));
-
+vec3 getSkyboxCol(vec3 D) {
     //convert to equirectangular uv mapping
-    float u = atan(vDir.z, vDir.x) / (2.0 * PI) + 0.5;
-    float v = asin(vDir.y) / PI + 0.5;
+    float u = atan(D.z, D.x) / (2.0 * PI) + 0.5;
+    float v = asin(D.y) / PI + 0.5;
 
     return texture(skybox, vec2(u,1-v)).rgb;
 }
@@ -330,7 +321,13 @@ vec3 getSkyboxCol() {
 void main() {
     vec4 initSample = texture(gPosition, texCoord).rgba;
     if (isinf(initSample.r)) {
-        fragColor = vec4(getSkyboxCol()*0.5,1);
+        vec2 uv = texCoord * 2.0 - 1.0;
+        uv.x *= width / height;
+        //compute view direction before rotation
+        float fovRadians = FOV * (PI / 180.0);
+        vec3 vDir = normalize(vec3(uv, -1.0 / tan(fovRadians * 0.5)));
+        vDir = rotate(vDir, camRot*vec3(-1,1,1));
+        fragColor = vec4(getSkyboxCol(vDir)*0.5,1);
     } else {
         vec3 thisPosition = initSample.rgb;
         vec3 thisNormal = (texture(gNormal, texCoord).rgb - 0.5) * 2;
@@ -366,7 +363,7 @@ void main() {
 	        //radiance of the current light
             vec3 H = normalize(V+Wi);
 	        //halfway between vector to cam and light
-            vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+            vec3 F = fresnelSchlickRoughness(max(dot(H, V), 0.0), F0, roughness);
             float NDF = DistributionGGX(N, H, roughness);
             float G   = GeometrySmith(N, V, Wi, roughness);
             vec3 numerator = NDF * G * F;
@@ -379,15 +376,15 @@ void main() {
             //Lo += (specular*5) * radiance * NdotL * calculateShadow(l, p, N);
             Lo += (kD * albedo / PI + specular) * radiance * NdotL * calculateShadow(l, p, N);
         }
-	float brightness = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
-        if (brightness > 1) {
-            bloomColor = vec4(Lo,1);
-        } else {
-            bloomColor = vec4(0,0,0,1);
-        }
 	//gamma correct
         //Lo = Lo/(Lo+vec3(1));
         //Lo = pow(Lo, vec3(1/gamma));
         fragColor = vec4(Lo,1);
+    }
+    float brightness = dot(fragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    if (brightness > 1) {
+        bloomColor = fragColor;
+    } else {
+        bloomColor = vec4(0);
     }
 }

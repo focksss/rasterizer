@@ -99,14 +99,14 @@ public class Controller {
             }
         } else {equalsWasDown = false;}
 
-        if (glfwGetKey(window, GLFW_KEY_LEFT_BRACKET) == GLFW_PRESS) Run.EXPOSURE -= 0.01F;
-        if (glfwGetKey(window, GLFW_KEY_RIGHT_BRACKET) == GLFW_PRESS) Run.EXPOSURE += 0.01F;
+        if (glfwGetKey(window, GLFW_KEY_LEFT_BRACKET) == GLFW_PRESS) Run.EXPOSURE -= 0.1F;
+        if (glfwGetKey(window, GLFW_KEY_RIGHT_BRACKET) == GLFW_PRESS) Run.EXPOSURE += 0.1F;
         Run.EXPOSURE = Math.max(Run.EXPOSURE, 0);
-        if (glfwGetKey(window, GLFW_KEY_SEMICOLON) == GLFW_PRESS) Run.GAMMA -= 0.01F;
-        if (glfwGetKey(window, GLFW_KEY_APOSTROPHE) == GLFW_PRESS) Run.GAMMA += 0.01F;
+        if (glfwGetKey(window, GLFW_KEY_SEMICOLON) == GLFW_PRESS) Run.GAMMA -= 0.05F;
+        if (glfwGetKey(window, GLFW_KEY_APOSTROPHE) == GLFW_PRESS) Run.GAMMA += 0.05F;
         Run.GAMMA = Math.max(Run.GAMMA, 0);
-        if (glfwGetKey(window, GLFW_KEY_F7) == GLFW_PRESS) Run.SSAOradius -= 0.001F;
-        if (glfwGetKey(window, GLFW_KEY_F8) == GLFW_PRESS) Run.SSAOradius += 0.001F;
+        if (glfwGetKey(window, GLFW_KEY_F7) == GLFW_PRESS) Run.SSAOradius -= 0.005F;
+        if (glfwGetKey(window, GLFW_KEY_F8) == GLFW_PRESS) Run.SSAOradius += 0.005F;
         Run.SSAOradius = Math.max(Run.SSAOradius, 0);
 
         if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {

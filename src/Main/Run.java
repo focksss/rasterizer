@@ -43,11 +43,11 @@ public class Run {
             geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader;
     public static long window, FPS = 240;
 
-    public static float EXPOSURE = 10.5f;
+    public static float EXPOSURE = 1f;
     public static float GAMMA = 1;
     public static boolean doSSAO = true;
-    public static float SSAOradius = 0.11f;
-    public static float SSAObias = 0.05f;
+    public static float SSAOradius = 0.6f;
+    public static float SSAObias = 0.001f;
     public static float bloomRadius = 1f;
     public static float bloomIntensity = 0.5f;
     public static float bloomThreshold = 1f;
@@ -119,9 +119,7 @@ public class Run {
     }
 
     public static void createWorld() {
-        world.addObject("C:\\Graphics\\assets\\bistro", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        //world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0), new Vec(0), "bistro");
-        //world.addObject("C:\\Graphics\\assets\\sponza", new Vec(0.01), new Vec(0), new Vec(0), "bistro");
+        world.addObject("C:\\Graphics\\assets\\bistro2", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
         world.worldObjects.get(0).newInstance();
 
         Light newLight = new Light(1);
@@ -138,18 +136,6 @@ public class Run {
         world.addLight(newLight);
 
         world.addLightsForObject(world.worldObjects.get(0), 0.5f);
-
-//        Light newLight1 = new Light(0);
-//        newLight1.setProperty("direction", new Vec(-0.6, 1.23, -0.34));
-//        newLight1.setProperty("position", new Vec(0.1, 2, 0.05));
-//        newLight1.setProperty("constantAttenuation", 1);
-//        newLight1.setProperty("linearAttenuation", 2);
-//        newLight1.setProperty("quadraticAttenuation", 0.5);
-//        newLight1.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
-//        newLight1.setProperty("diffuse", new Vec(10, 10, 10));
-//        newLight1.setProperty("specular", new Vec(1, 1, 1));
-//
-//        world.addLight(newLight1);
     }
     public static void render() {
         generateShadowMaps();
@@ -481,15 +467,21 @@ public class Run {
         gaussianBlurShader = new Shader(shaderPath + "\\gaussianBlurShader\\gaussianBlurFrag.glsl", shaderPath + "\\quadVertex.glsl");
     }
     public static void scaleToWindow() {
+        lightingFBO = glGenFramebuffers();
         glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
-        glDeleteTextures(lightingTex);
         lightingTex = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, lightingTex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, MemoryUtil.NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightingTex, 0);
+        bloomTex = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, bloomTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightingTex, 0);
-        glDeleteRenderbuffers(lightingRBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTex, 0);
+        glDrawBuffers(new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
         lightingRBO = glGenRenderbuffers();
         glBindRenderbuffer(GL_RENDERBUFFER, lightingRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
@@ -497,61 +489,68 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
+        gFBO = glGenFramebuffers();
         glBindFramebuffer(GL_FRAMEBUFFER, gFBO);
-        glDeleteTextures(gPosition);
         gPosition = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, gPosition);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
-        glDeleteTextures(gNormal);
         gNormal = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, gNormal);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
-        glDeleteTextures(gMaterial);
         gMaterial = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, gMaterial);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gMaterial, 0);
-        glDeleteTextures(gTexCoord);
         gTexCoord = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, gTexCoord);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gTexCoord, 0);
-        glDeleteTextures(gViewPosition);
         gViewPosition = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, gViewPosition);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, gViewPosition, 0);
-        glDeleteTextures(gRBO);
+        gViewNormal = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, gViewNormal);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, gViewNormal, 0);
+        int[] gAttachments = new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5};
+        glDrawBuffers(gAttachments);
         gRBO = glGenRenderbuffers();
         glBindRenderbuffer(GL_RENDERBUFFER, gRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gRBO);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        postProcessingFBO = glGenFramebuffers();
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
-        glDeleteTextures(postProcessingTex);
         postProcessingTex = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, postProcessingTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postProcessingTex, 0);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
+        SSAOfbo = glGenFramebuffers();
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);
-        glDeleteTextures(SSAOtex);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
         SSAOtex = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, SSAOtex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
@@ -559,8 +558,10 @@ public class Run {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSAOtex, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        SSAOblurFBO = glGenFramebuffers();
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOblurFBO);
-        glDeleteTextures(SSAOblurTex);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+        glReadBuffer(GL_COLOR_ATTACHMENT0);
         SSAOblurTex = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, SSAOblurTex);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
@@ -569,6 +570,25 @@ public class Run {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSAOblurTex, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         generateSSAOsampling();
+
+        gaussianBlurFBO = new int[2];
+        for (int i = 0; i < 2; i++)
+        {
+            gaussianBlurFBO[i] = glGenFramebuffers();
+            glBindFramebuffer(GL_FRAMEBUFFER, gaussianBlurFBO[i]);
+            glDrawBuffer(GL_COLOR_ATTACHMENT0);
+            if (i == 0) {gaussianBlurTexOneHalf = glGenTextures();} else {gaussianBlurTex = glGenTextures();}
+            glBindTexture(GL_TEXTURE_2D, (i == 0) ? gaussianBlurTexOneHalf : gaussianBlurTex);
+            glTexImage2D(
+                    GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL
+            );
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, (i == 0) ? gaussianBlurTexOneHalf : gaussianBlurTex, 0);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
     private static void gaussianBlur(int texture) {
