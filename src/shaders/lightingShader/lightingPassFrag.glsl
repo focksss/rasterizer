@@ -43,7 +43,7 @@ layout(std430, binding = 4) buffer lightSpaceMatrixBuffer {
 //temp single shadowmap
 uniform sampler2D shadowmaps;
 
-int lightFields = 24;
+int lightFields = 22;
 int mtlFields = int(mtlData[0]);
 mat3 rotateX(float angle) {
     float c = cos(angle);
@@ -225,7 +225,7 @@ float attenuation(vec3 lPos, vec3 pos, float constant, float linear, float quadr
 vec4 getLighting(light l, vec3 pos) {
     vec4 Out;
     if (l.type == 0) {
-        Out.w = attenuation(l.position, pos, l.constantAtten, l.linearAtten, l.quadraticAtten);
+        Out.w = attenuation(l.position, pos, l.constantAtten, l.linearAtten*5, l.quadraticAtten*20);
         Out.xyz = normalize(l.position - pos);
     } else if (l.type == 1) {
         Out.w = 1;
@@ -250,29 +250,32 @@ vec4 getLighting(light l, vec3 pos) {
     return Out;
 }
 float calculateShadow(light l, vec3 fragPos, vec3 normal) {
-    vec4 fragPosLightSpace = l.lightSpaceMatrix * vec4(fragPos, 1);
-    vec3 projCoords = (fragPosLightSpace.xyz / fragPosLightSpace.w) * 0.5 + 0.5;
-    float closestDepth = texture(l.shadowMap, projCoords.xy).r;
-    float currentDepth = projCoords.z;
-    vec3 lightDir = normalize(fragPos - l.position);
-    float bias = max(0.0001 * (1.0 - dot(normal, -lightDir)), 0.0001);
+    if (l.type == 1) {
+        vec4 fragPosLightSpace = l.lightSpaceMatrix * vec4(fragPos, 1);
+        vec3 projCoords = (fragPosLightSpace.xyz / fragPosLightSpace.w) * 0.5 + 0.5;
+        float closestDepth = texture(l.shadowMap, projCoords.xy).r;
+        float currentDepth = projCoords.z;
+        vec3 lightDir = normalize(fragPos - l.position);
+        float bias = max(0.0001 * (1.0 - dot(normal, -lightDir)), 0.0001);
 
-    float shadow = 0.0;
-    vec2 texelSize = 1.0 / textureSize(l.shadowMap, 0);
-    for(int x = -1; x <= 1; ++x)
-    {
-        for(int y = -1; y <= 1; ++y)
+        float shadow = 0.0;
+        vec2 texelSize = 1.0 / textureSize(l.shadowMap, 0);
+        for (int x = -1; x <= 1; ++x)
         {
-            float pcfDepth = texture(l.shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;
+            for (int y = -1; y <= 1; ++y)
+            {
+                float pcfDepth = texture(l.shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+                shadow += currentDepth - bias > pcfDepth  ? 1.0 : 0.0;
+            }
         }
+        shadow /= 9.0;
+
+        if (projCoords.z > 1.0)
+        shadow = 0.0;
+
+        return 1-shadow;
     }
-    shadow /= 9.0;
-
-    if(projCoords.z > 1.0)
-    shadow = 0.0;
-
-    return 1-shadow;
+    return 1;
 }
 vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
@@ -344,13 +347,13 @@ void main() {
         float ao = texture(SSAOtex, texCoord).r;
         //user-set scene ambient (Sa) approximation
         float Sa = 0.1;
-	vec3 F0 = vec3(0.04); 
+	    vec3 F0 = vec3(0.04);
         F0 = mix(F0, albedo, metallic);
 
         vec3 Lo = (albedo * Sa * (SSAO ? ao : 1)) + thisMtl.Ke; //ambient preset
         vec3 V = normalize(camPos - p);
 	    //approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
-        for (int i = 0; i < int(lightData.length()/lightFields)+1; i++) {
+        for (int i = 0; i < int(lightData.length()/lightFields); i++) {
             light l = newLight(i);
             vec4 thisLighting = getLighting(l,p);
 	        float atten = thisLighting.w;

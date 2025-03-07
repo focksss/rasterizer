@@ -147,7 +147,7 @@ public class World {
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, textureHandleSSBO);
         memFree(textureHandles);
 
-        FloatBuffer lightData = MemoryUtil.memAllocFloat(worldLights.size() * 24);
+        FloatBuffer lightData = MemoryUtil.memAllocFloat(worldLights.size() * 22);
         for (worldLight wlight : worldLights) {
             Light light = wlight.light;
             for (Field field : light.getClass().getDeclaredFields()) {
@@ -187,8 +187,8 @@ public class World {
         memFree(shadowmapHandles);
 
         FloatBuffer lightSpaceMatrixBuffer = MemoryUtil.memAllocFloat(worldLights.size() * 16);
-        for (worldLight wLight : worldLights) {
-            Light light = wLight.light;
+        for (int i = worldLights.size()-1; i >= 0; i--) {
+            Light light = worldLights.get(i).light;
             light.lightSpaceMatrix.get(lightSpaceMatrixBuffer);
         }
         //lightSpaceMatrixBuffer.flip();
@@ -270,29 +270,61 @@ public class World {
         memFree(verticesBuffer);
         worldObjects.add(newWorldObject);
     }
+    public void addLightsForObject(worldObject obj, float minDist) {
+        Obj object = obj.object;
+        List<Material> mats = object.mtllib;
+        List<Light> newLights = new ArrayList<>();
+        for (Triangle tri : object.triangles) {
+            Material thisMtl = mats.get(tri.material);
+            if (thisMtl.Ke.magnitude() > 0) {
+                Vec pos = new Vec(tri.v1);
+                boolean willAdd = true;
+                for (Light l : newLights) {
+                    if (l.position.dist(pos) < minDist) {willAdd = false; break;}
+                }
+                if (willAdd) {
+                    Light newLight1 = new Light(0);
+                    newLight1.setProperty("position", pos);
+                    newLight1.setProperty("constantAttenuation", 1);
+                    newLight1.setProperty("linearAttenuation", 2);
+                    newLight1.setProperty("quadraticAttenuation", 0.5);
+                    newLight1.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
+                    newLight1.setProperty("diffuse", new Vec(thisMtl.Ke));
+                    newLight1.setProperty("specular", new Vec(1, 1, 1));
+
+                    newLights.add(newLight1);
+                }
+            }
+        }
+        for (Light l : newLights) {
+            addLight(l);
+        }
+    }
     public void addLight(Light light) {
         worldLight newLight = new worldLight();
         newLight.light = light;
         newLight.transform = new Matrix4f().identity();
 
-        newLight.shadowmapFramebuffer = glGenFramebuffers();
-        newLight.shadowmapTexture = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, newLight.shadowmapTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, Run.SHADOW_RES, Run.SHADOW_RES, 0, GL_DEPTH_COMPONENT, GL_FLOAT, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        float[] borderColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        if (light.type == 1) {
+            newLight.shadowmapFramebuffer = glGenFramebuffers();
+            newLight.shadowmapTexture = glGenTextures();
+            glBindTexture(GL_TEXTURE_2D, newLight.shadowmapTexture);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, Run.SHADOW_RES, Run.SHADOW_RES, 0, GL_DEPTH_COMPONENT, GL_FLOAT, MemoryUtil.NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+            float[] borderColor = {1.0f, 1.0f, 1.0f, 1.0f};
+            glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, newLight.shadowmapFramebuffer);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, newLight.shadowmapTexture, 0);
-        glDrawBuffer(GL_NONE);
-        glReadBuffer(GL_NONE);
-        newLight.shadowmapTexHandle = glGetTextureHandleARB(newLight.shadowmapTexture);
-        glMakeTextureHandleResidentARB(newLight.shadowmapTexture);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, newLight.shadowmapFramebuffer);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, newLight.shadowmapTexture, 0);
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+            newLight.shadowmapTexHandle = glGetTextureHandleARB(newLight.shadowmapTexture);
+            glMakeTextureHandleResidentARB(newLight.shadowmapTexture);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
 
         worldLights.add(newLight);
     }
@@ -363,6 +395,14 @@ public class World {
         long shadowmapTexHandle;
         Matrix4f transform;
         Light light;
+
+        public worldLight() {
+            identifer = "";
+            shadowmapFramebuffer = 0;
+            shadowmapTexture = 0;
+            shadowmapTexHandle = 0;
+            transform = new Matrix4f().identity();
+        }
     }
 
     private float getMaterialFieldCount() {

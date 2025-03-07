@@ -31,7 +31,7 @@ public class PBRtextureSeparator {
             String filePath = file.getAbsolutePath();
             String fileName = file.getName();
 
-            if (!file.getName().endsWith(".dds")) {
+            if (!file.getName().endsWith(".dds") && file.getName().endsWith("Specular.png")) {
                 try (MemoryStack stack = MemoryStack.stackPush()) {
                     IntBuffer width = stack.mallocInt(1);
                     IntBuffer height = stack.mallocInt(1);
@@ -56,14 +56,14 @@ public class PBRtextureSeparator {
                         byte b = image.get(i + 2); // Blue channel
                         byte a = image.get(i + 3); // Preserve alpha
 
-                        metallic.put(i, (byte) 0); // R = 0
-                        metallic.put(i + 1, (byte) 0); // G = 0
+                        metallic.put(i, b); // R = 0
+                        metallic.put(i + 1, b); // G = 0
                         metallic.put(i + 2, b); // B = Blue channel
                         metallic.put(i + 3, a); // A = Alpha
 
-                        roughness.put(i, (byte) 0); // R = 0
+                        roughness.put(i, g); // R = 0
                         roughness.put(i + 1, g); // G = Green channel
-                        roughness.put(i + 2, (byte) 0); // B = 0
+                        roughness.put(i + 2, g); // B = 0
                         roughness.put(i + 3, a); // A = Alpha
                     }
 

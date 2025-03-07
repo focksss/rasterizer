@@ -76,8 +76,8 @@ public class Run {
     public static void main(String[] args) {
         init();
         runEngine();
-        //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/outputTextures");
-        //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/bistro.mtl");
+        //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
+        //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
     }
     public static void runEngine() {
         controller = new Controller(new Vec(0), new Vec(0), window);
@@ -137,22 +137,19 @@ public class Run {
         newLight.setProperty("specular", new Vec(1, 1, 1));
         world.addLight(newLight);
 
-/*
-        Light newLight = new Light(3);
-        newLight.setProperty("direction", new Vec(-0.5, -1, -0.15));
-        newLight.setProperty("position", new Vec(0.1, 1, 0.05).mult(50));
-        newLight.setProperty("cutoff", 0.8);
-        newLight.setProperty("innerCutoff", 0.9);
-        newLight.setProperty("constantAttenuation", 1);
-        newLight.setProperty("linearAttenuation", 0.09);
-        newLight.setProperty("quadraticAttenuation", 0.032);
-        newLight.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
-        newLight.setProperty("diffuse", new Vec(1, 1, 1));
-        newLight.setProperty("specular", new Vec(1, 1, 1));
+        world.addLightsForObject(world.worldObjects.get(0), 0.5f);
 
-        world.addLight(newLight);
-*/
-
+//        Light newLight1 = new Light(0);
+//        newLight1.setProperty("direction", new Vec(-0.6, 1.23, -0.34));
+//        newLight1.setProperty("position", new Vec(0.1, 2, 0.05));
+//        newLight1.setProperty("constantAttenuation", 1);
+//        newLight1.setProperty("linearAttenuation", 2);
+//        newLight1.setProperty("quadraticAttenuation", 0.5);
+//        newLight1.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
+//        newLight1.setProperty("diffuse", new Vec(10, 10, 10));
+//        newLight1.setProperty("specular", new Vec(1, 1, 1));
+//
+//        world.addLight(newLight1);
     }
     public static void render() {
         generateShadowMaps();
@@ -677,17 +674,18 @@ public class Run {
         glEnable(GL_DEPTH_TEST);
         glCullFace(GL_FRONT_FACE);
         for (World.worldLight wLight : world.worldLights) {
-            glBindFramebuffer(GL_FRAMEBUFFER, wLight.shadowmapFramebuffer);
-            glViewport(0, 0, SHADOW_RES, SHADOW_RES);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            shadowShader.useProgram();
-            Light light = wLight.light;
+            if (wLight.light.type == 1) {
+                glBindFramebuffer(GL_FRAMEBUFFER, wLight.shadowmapFramebuffer);
+                glViewport(0, 0, SHADOW_RES, SHADOW_RES);
+                glClear(GL_DEPTH_BUFFER_BIT);
+                shadowShader.useProgram();
+                Light light = wLight.light;
 
-            shadowShader.setUniform("lightSpaceMatrix", light.lightSpaceMatrix);
+                shadowShader.setUniform("lightSpaceMatrix", light.lightSpaceMatrix);
 
-            glEnable(GL_DEPTH_TEST);
-            drawScene(shadowShader);
-            glCullFace(GL_BACK);
+                glEnable(GL_DEPTH_TEST);
+                drawScene(shadowShader);
+            }
         }
         glCullFace(GL_BACK);
     }

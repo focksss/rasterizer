@@ -24,7 +24,7 @@ public class Light {
     public float innerCutoff = 0.0f;
     public float outerCutoff = 0.0f;
 
-    public Matrix4f lightSpaceMatrix = new Matrix4f();
+    public Matrix4f lightSpaceMatrix;
 
     public Light(int type) {
         this.type = type;

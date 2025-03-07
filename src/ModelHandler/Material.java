@@ -23,7 +23,7 @@ public class Material {
     double Tr= 0; // occasionally used, opposite of d (0 is opaque)
     Vec Tf = new Vec(); // transmission filter
     double Ni = 0; // refractive index
-    Vec Ke = new Vec(); // emission color
+    public Vec Ke = new Vec(); // emission color
     int illum = 0; // shading model (0-10, each has diff properties)
     String map_Ka = "";
     String map_Kd = "";
