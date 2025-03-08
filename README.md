@@ -26,6 +26,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 ## Current Features
 - Custom .obj and .mtl parser
   - Light sources auto generate at emissive areas
+- Custom gLTF parser
 - Custom vector class (rather than JOML Vec3f)
 - Simple + debug controls
 - Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
@@ -43,7 +44,6 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
   - Animated HDRI
 - Finish implementing support for multiple shadow maps
 - Skeletal animation
-  - gLTF importing?
 
 ## Usage
 Include lwjgl, lwjgl-opengl, lwjgl-stb, lwjgl-glfw, dds-lwjgl-3.0.0, joml, json
