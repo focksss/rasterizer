@@ -76,8 +76,8 @@ public class Run {
 
     public static void main(String[] args) {
         gLTF newObject = new gLTF("C:\\Graphics\\assets\\grassblockGLTF");
-        //init();
-        //runEngine();
+        init();
+        runEngine();
 
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
         //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
