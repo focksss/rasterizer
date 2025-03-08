@@ -358,6 +358,7 @@ void main() {
             light l = newLight(i);
             vec4 thisLighting = getLighting(l,p);
 	        float atten = thisLighting.w;
+            if (atten < 0.0001) break;
 
             vec3 Wi = thisLighting.xyz;
 	        //Wi = vector from frag to light
