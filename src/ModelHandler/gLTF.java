@@ -67,12 +67,10 @@ public class gLTF {
                             JSONObject pbrMat = (JSONObject) value;
                             for (String PBRkey : pbrMat.keySet()) {
                                 Object PBRvalue = pbrMat.get(PBRkey);
-                                System.out.println(PBRkey + ": " + PBRvalue);
                                 int mapKey = gltfMatMap.indexOf(PBRkey);
                                 if (mapKey != -1) {
                                     int texIdx = -1;
-                                    if (PBRvalue instanceof JSONObject) {
-                                        JSONObject textureMap = (JSONObject) PBRvalue;
+                                    if (PBRvalue instanceof JSONObject textureMap) {
                                         texIdx = textureMap.getInt("index");
                                     } else if (PBRvalue instanceof Number) {
                                         PBRvalue = ((Number) PBRvalue).floatValue();
