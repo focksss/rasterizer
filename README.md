@@ -46,7 +46,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
   - gLTF importing?
 
 ## Usage
-Include lwjgl, lwjgl-opengl, lwjgl-stb, lwjgl-glfw, dds-lwjgl-3.0.0, joml
+Include lwjgl, lwjgl-opengl, lwjgl-stb, lwjgl-glfw, dds-lwjgl-3.0.0, joml, json
 
 Replace paths to skybox and objects with paths to objects on your computer
 - WASD to move, space and left shift for vertical movement
