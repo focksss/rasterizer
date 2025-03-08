@@ -52,6 +52,8 @@ public class Material {
     double subsurface = 0;
     Vec subsurfaceColor = new Vec();
     Vec subsurfaceRadius = new Vec();
+    //gLTF unique
+    Boolean doubleSided = false;
 
     private static final Set<String> vecProperties = Set.of("Ka", "Kd", "Ks", "Tf", "Ke", "SubsurfaceColor", "SubsurfaceRadius");
     private static final Set<String> doubleProperties = Set.of("Ns", "d", "Tr", "Ni", "Pm", "Pr", "Ps", "Pc", "Pcr", "aniso", "anisor", "Density", "subsurface");
@@ -91,6 +93,7 @@ public class Material {
         System.out.println("map_Ns: " + map_Ns);
         System.out.println("map_Ke: " + map_Ke);
         System.out.println("map_Disp: " + map_Disp);
+        System.out.println("doubleSided: " + doubleSided);
     }
     public Material() {
         this.texturesDirectory = "NULL";
