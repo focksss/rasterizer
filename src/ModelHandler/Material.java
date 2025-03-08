@@ -57,6 +57,41 @@ public class Material {
     private static final Set<String> doubleProperties = Set.of("Ns", "d", "Tr", "Ni", "Pm", "Pr", "Ps", "Pc", "Pcr", "aniso", "anisor", "Density", "subsurface");
     private static final Set<String> intProperties = Set.of("illum");
 
+    public void print() {
+        System.out.println("name: " + name);
+        System.out.println("texturesDirectory: " + texturesDirectory);
+        System.out.print("Ka: "); Ka.println();
+        System.out.print("Kd: "); Kd.println();
+        System.out.print("Ks: "); Ks.println();
+        System.out.println("Ns: " + Ns);
+        System.out.println("D: " + d);
+        System.out.println("Tr: " + Tr);
+        System.out.print("Tf: "); Tf.println();
+        System.out.println("Ni: " + Ni);
+        System.out.print("Ke: "); Ke.println();
+        System.out.println("illum: " + illum);
+        System.out.println("map_Ka: " + map_Ka);
+        System.out.println("map_Kd: " + map_Kd);
+        System.out.println("map_Ks: " + map_Ks);
+        System.out.println("Pm: " + Pm);
+        System.out.println("Pr: " + Pr);
+        System.out.println("Ps: " + Ps);
+        System.out.println("Pc: " + Pc);
+        System.out.println("Pcr: " + Pcr);
+        System.out.println("aniso: " + aniso);
+        System.out.println("anisor: " + anisor);
+        System.out.println("map_Pm: " + map_Pm);
+        System.out.println("map_Pr: " + map_Pr);
+        System.out.println("map_Ps: " + map_Ps);
+        System.out.println("map_Pc: " + map_Pc);
+        System.out.println("map_Pcr: " + map_Pcr);
+        System.out.println("map_Bump: " + map_Bump);
+        System.out.println("map_d: " + map_d);
+        System.out.println("map_Tr: " + map_Tr);
+        System.out.println("map_Ns: " + map_Ns);
+        System.out.println("map_Ke: " + map_Ke);
+        System.out.println("map_Disp: " + map_Disp);
+    }
     public Material() {
         this.texturesDirectory = "NULL";
         this.Ka = new Vec(0);
@@ -93,7 +128,7 @@ public class Material {
                     return;
                 }
             }
-            throw new RuntimeException("Invalid property: " + name);
+            throw new RuntimeException("Invalid property+value: " + name + " set to " + value);
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Error setting property: " + name, e);
         }

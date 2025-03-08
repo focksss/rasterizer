@@ -8,6 +8,7 @@
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-glfw" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-opengl" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-stb" />
+      <root url="jar://$PROJECT_DIR$/../GraphicsLibraries/json-20210307.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

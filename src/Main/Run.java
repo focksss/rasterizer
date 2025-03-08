@@ -1,6 +1,7 @@
 package Main;
 
 import Datatypes.Shader;
+import ModelHandler.gLTF;
 import Util.*;
 import Datatypes.Vec;
 import ModelHandler.Light;
@@ -74,8 +75,10 @@ public class Run {
 
 
     public static void main(String[] args) {
-        init();
-        runEngine();
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\grassblockGLTF");
+        //init();
+        //runEngine();
+
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
         //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
     }
@@ -119,7 +122,8 @@ public class Run {
     }
 
     public static void createWorld() {
-        world.addObject("C:\\Graphics\\assets\\bistro2", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        //world.addObject("C:\\Graphics\\assets\\bistro2", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        world.addObject("C:\\Graphics\\antiDoxxFolder\\grassblock1", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
         world.worldObjects.get(0).newInstance();
 
         Light newLight = new Light(1);

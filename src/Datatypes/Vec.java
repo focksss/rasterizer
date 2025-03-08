@@ -19,6 +19,11 @@ public class Vec {
     public Vec() {
         x = y = z = w = 0;
     }
+    public Vec(float x, float y, float z) {
+        xf = x;
+        yf = y;
+        zf = z;
+    }
     public Vec(double x, double y, double z) {
         this.x = x;
         this.y = y;
