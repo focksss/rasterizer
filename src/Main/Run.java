@@ -139,7 +139,8 @@ public class Run {
         newLight.setProperty("specular", new Vec(1, 1, 1));
         world.addLight(newLight);
 
-        world.addLightsForObject(world.worldObjects.get(0), 0.5f);
+        //world.addLightsForObject(world.worldObjects.get(0), 0.5f);
+        world.addLightsForScene(newObject, 0, 0.5f);
     }
     public static void render() {
         generateShadowMaps();

@@ -289,34 +289,56 @@ public class World {
         List<Material> mats = object.mtllib;
         List<Light> newLights = new ArrayList<>();
         for (Triangle tri : object.triangles) {
-            Material thisMtl = mats.get(tri.material);
-            if (thisMtl.Ke.magnitude() > 0) {
-                Vec pos = new Vec(tri.v1);
-                boolean willAdd = true;
-                for (Light l : newLights) {
-                    if (l.position.dist(pos) < minDist) {willAdd = false; break;}
-                }
-                if (willAdd) {
-                    Light newLight1 = new Light(0);
-                    newLight1.setProperty("position", pos);
-                    newLight1.setProperty("constantAttenuation", 1);
-                    newLight1.setProperty("linearAttenuation", 2);
-                    newLight1.setProperty("quadraticAttenuation", 0.5);
-                    newLight1.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
-                    newLight1.setProperty("diffuse", new Vec(thisMtl.Ke));
-                    newLight1.setProperty("specular", new Vec(1, 1, 1));
-
-                    newLights.add(newLight1);
-                }
-            }
+            addLightsForTriangleSet(minDist, mats, newLights, tri);
         }
         for (Light l : newLights) {
             addLight(l);
         }
     }
-    public void addLightsForScene(gLTF.Scene scene, float minDist) {
-
+    public void addLightsForScene(gLTF object, int scene, float minDist) {
+        gLTF.Scene operatingScene = gLTF.Scenes.get(scene);
+        for (gLTF.Node node : operatingScene.nodes) {
+            addLightsForNode(node, minDist, gLTF.mtllib);
+        }
     }
+    private void addLightsForNode(gLTF.Node node, float minDist, List<Material> mats) {
+        if (node.mesh == null) {
+            for (gLTF.Node child : node.children) {
+                addLightsForNode(child, minDist, mats);
+            }
+        } else {
+            List<Light> newLights = new ArrayList<>();
+            for (Triangle tri : node.mesh.triangles) {
+                addLightsForTriangleSet(minDist, mats, newLights, tri);
+            }
+            for (Light l : newLights) {
+                addLight(l);
+            }
+        }
+    }
+    private void addLightsForTriangleSet(float minDist, List<Material> mats, List<Light> newLights, Triangle tri) {
+        Material thisMtl = mats.get(tri.material);
+        if (thisMtl.Ke.magnitude() > 0) {
+            Vec pos = new Vec(tri.v1);
+            boolean willAdd = true;
+            for (Light l : newLights) {
+                if (l.position.dist(pos) < minDist) {willAdd = false; break;}
+            }
+            if (willAdd) {
+                Light newLight1 = new Light(0);
+                newLight1.setProperty("position", pos);
+                newLight1.setProperty("constantAttenuation", 1);
+                newLight1.setProperty("linearAttenuation", 2);
+                newLight1.setProperty("quadraticAttenuation", 0.5);
+                newLight1.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
+                newLight1.setProperty("diffuse", new Vec(thisMtl.Ke.mult(thisMtl.emissiveStrength)));
+                newLight1.setProperty("specular", new Vec(1, 1, 1));
+
+                newLights.add(newLight1);
+            }
+        }
+    }
+
     public void addLight(Light light) {
         worldLight newLight = new worldLight();
         newLight.light = light;

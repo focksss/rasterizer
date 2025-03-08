@@ -54,7 +54,7 @@ public class Material {
     Vec subsurfaceRadius = new Vec();
     //gLTF unique
     double alphaCutoff = 0.1;
-    double emissiveStrength = 1;
+    public double emissiveStrength = 1;
     Boolean doubleSided = false;
 
     private static final Set<String> vecProperties = Set.of("Ka", "Kd", "Ks", "Tf", "Ke", "SubsurfaceColor", "SubsurfaceRadius");

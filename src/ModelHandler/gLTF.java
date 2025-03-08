@@ -31,8 +31,6 @@ import static org.lwjgl.system.MemoryUtil.memFree;
 public class gLTF {
     public static List<Material> mtllib = new ArrayList<>();
     public static List<String> texturePaths = new ArrayList<>();
-    String[] gltfMatPropertiesMap = new String[]{"name", "baseColorFactor", "baseColorTexture", "metallicFactor", "roughnessFactor", "metallicTexture", "roughnessTexture"};
-    String[] mtlPropertiesMap = new String[]{"name", "Kd", "map_Kd", "Pm", "Pr", "map_Pm", "map_Pr"};
     public static Scene activeScene;
     public static List<Scene> Scenes = new ArrayList<>();
     public static List<Node> Nodes = new ArrayList<>();
