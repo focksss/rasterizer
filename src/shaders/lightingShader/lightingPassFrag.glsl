@@ -122,6 +122,8 @@ struct mtl {
 //CUSTOM
     float Density; float subsurface;
     vec3 subsurfaceColor; vec3 subsurfaceRadius;
+//GLTF
+    float emissiveStrength;
 
     vec3 normal;
 };
@@ -167,6 +169,7 @@ mtl newMtl(int m) {
     Out.subsurface = mtlData[mtlFields*m + 43];
     Out.subsurfaceColor = vec3(mtlData[mtlFields*m + 44], mtlData[mtlFields*m + 45], mtlData[mtlFields*m + 46]);
     Out.subsurfaceRadius = vec3(mtlData[mtlFields*m + 47], mtlData[mtlFields*m + 48], mtlData[mtlFields*m + 49]);
+    Out.emissiveStrength = mtlData[mtlFields*m + 51];
 
     Out.normal = vec3(0);
     return Out;
@@ -189,8 +192,8 @@ mtl mapMtl(mtl M, vec2 uv) {
     m.Ks = ((M.map_Ks > -1) ? sampleTexture(M.map_Ks, uv).rgb : M.Ks);
     m.Ke = ((M.map_Ke > -1) ? sampleTexture(M.map_Ke, uv).rgb : M.Ke);
     m.Ns = ((M.map_Ns > -1) ? sampleTexture(M.map_Ns, uv).r : M.Ns);
-    m.Pm = ((M.map_Pm > -1) ? sampleTexture(M.map_Pm, uv).r : M.Pm);
-    m.Pr = ((M.map_Pr > -1) ? sampleTexture(M.map_Pr, uv).r : M.Pr);
+    m.Pm = ((M.map_Pm > -1) ? sampleTexture(M.map_Pm, uv).b : M.Pm);
+    m.Pr = ((M.map_Pr > -1) ? sampleTexture(M.map_Pr, uv).g : M.Pr);
     m.Ps = ((M.map_Ps > -1) ? sampleTexture(M.map_Ps, uv).r : M.Ps);
     m.Pc = ((M.map_Pc > -1) ? sampleTexture(M.map_Pc, uv).r : M.Pc);
     return m;
@@ -338,6 +341,7 @@ void main() {
         vec3 p = thisPosition;
         vec3 albedo = thisMtl.Kd;
         vec3 N = thisNormal;
+        //fragColor = vec4(thisMtl.Ke, 1); return;
         float metallic = thisMtl.Pm;
         float roughness = thisMtl.Pr;
         //ambient occlusion
@@ -347,7 +351,7 @@ void main() {
 	    vec3 F0 = vec3(0.04);
         F0 = mix(F0, albedo, metallic);
 
-        vec3 Lo = (albedo * Sa * (SSAO ? ao : 1)) + thisMtl.Ke; //ambient preset
+        vec3 Lo = (albedo * Sa * (SSAO ? ao : 1)) + thisMtl.Ke*thisMtl.emissiveStrength; //ambient preset
         vec3 V = normalize(camPos - p);
 	    //approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
         for (int i = 0; i < int(lightData.length()/lightFields); i++) {

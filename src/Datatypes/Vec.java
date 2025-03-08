@@ -23,6 +23,9 @@ public class Vec {
         xf = x;
         yf = y;
         zf = z;
+        this.x = x;
+        this.y = y;
+        this.z = z;
     }
     public Vec(double x, double y, double z) {
         this.x = x;

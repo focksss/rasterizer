@@ -50,7 +50,7 @@ void main()
     float mapKD = mtlData[int(mtlFields * vertexMaterial + 22)];
     if (mapKD > -1) {
         float d = texture(textures[int(mapKD)], vertexTexCoord).a;
-        if (d < 0.05) {
+        if (d < mtlData[int(mtlFields * vertexMaterial + 50)]) {
             discard;
         } else {
             setGbuffer();

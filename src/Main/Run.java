@@ -2,7 +2,6 @@ package Main;
 
 import Datatypes.Shader;
 import ModelHandler.gLTF;
-import Util.*;
 import Datatypes.Vec;
 import ModelHandler.Light;
 import org.lwjgl.opengl.GL;
@@ -75,9 +74,8 @@ public class Run {
 
 
     public static void main(String[] args) {
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\grassblockGLTF2");
-        //init();
-        //runEngine();
+        init();
+        runEngine();
 
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
         //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
@@ -122,8 +120,10 @@ public class Run {
     }
 
     public static void createWorld() {
-        //world.addObject("C:\\Graphics\\assets\\bistro2", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        world.addObject("C:\\Graphics\\antiDoxxFolder\\grassblock1", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistroGLTF");
+        world.addGLTF(newObject);
+
         world.worldObjects.get(0).newInstance();
 
         Light newLight = new Light(1);
@@ -305,130 +305,7 @@ public class Run {
         MemoryUtil.memFree(height);
         compileShaders();
 
-
-        lightingFBO = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
-        lightingTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, lightingTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightingTex, 0);
-        bloomTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, bloomTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTex, 0);
-        glDrawBuffers(new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
-        lightingRBO = glGenRenderbuffers();
-        glBindRenderbuffer(GL_RENDERBUFFER, lightingRBO);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, lightingRBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-        gFBO = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, gFBO);
-        gPosition = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, gPosition);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
-        gNormal = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, gNormal);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
-        gMaterial = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, gMaterial);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gMaterial, 0);
-        gTexCoord = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, gTexCoord);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gTexCoord, 0);
-        gViewPosition = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, gViewPosition);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, gViewPosition, 0);
-        gViewNormal = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, gViewNormal);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, gViewNormal, 0);
-        int[] gAttachments = new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5};
-        glDrawBuffers(gAttachments);
-        gRBO = glGenRenderbuffers();
-        glBindRenderbuffer(GL_RENDERBUFFER, gRBO);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gRBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-        postProcessingFBO = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
-        postProcessingTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, postProcessingTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postProcessingTex, 0);
-        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        
-
-        SSAOfbo = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);
-        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
-        SSAOtex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, SSAOtex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSAOtex, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        SSAOblurFBO = glGenFramebuffers();
-        glBindFramebuffer(GL_FRAMEBUFFER, SSAOblurFBO);
-        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
-        SSAOblurTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, SSAOblurTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSAOblurTex, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        generateSSAOsampling();
-
-        gaussianBlurFBO = new int[2];
-        for (int i = 0; i < 2; i++)
-        {
-            gaussianBlurFBO[i] = glGenFramebuffers();
-            glBindFramebuffer(GL_FRAMEBUFFER, gaussianBlurFBO[i]);
-            glDrawBuffer(GL_COLOR_ATTACHMENT0);
-            if (i == 0) {gaussianBlurTexOneHalf = glGenTextures();} else {gaussianBlurTex = glGenTextures();}
-            glBindTexture(GL_TEXTURE_2D, (i == 0) ? gaussianBlurTexOneHalf : gaussianBlurTex);
-            glTexImage2D(
-                    GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL
-            );
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, (i == 0) ? gaussianBlurTexOneHalf : gaussianBlurTex, 0);
-        }
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+        scaleToWindow();
 
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
@@ -611,7 +488,7 @@ public class Run {
         SSAOkernal = new Vec[64];
         for (int i = 0; i < 64; i++) {
             double scale = (double) i / 64;
-            scale = lerp(0.1, 1, scale * scale);
+            scale = lerp(scale * scale);
             SSAOkernal[i] = new Vec(
                     Math.random() * 2 - 1,
                     Math.random() * 2 - 1,
@@ -688,9 +565,25 @@ public class Run {
             }
             glBindVertexArray(obj.VAO);
             glEnableVertexAttribArray(0);
-//            glStencilFunc(GL_ALWAYS, 1, 0xFF);
-//            glStencilMask(0xFF);
             glDrawArraysInstanced(GL_TRIANGLES, 0, obj.triCount * 3, obj.numInstances);
+        }
+        for (gLTF ignored : world.worldGLTFs) {
+            gLTF.Scene scene = gLTF.activeScene;
+            for (gLTF.Node node : scene.nodes) {
+                renderNode(node, new Matrix4f().identity(), shader);
+            }
+        }
+    }
+    private static void renderNode(gLTF.Node node, Matrix4f parentTransform, Shader shader) {
+        if (node.mesh == null) {
+            for (gLTF.Node childNode : node.children) {
+                renderNode(childNode, parentTransform.mul(node.transform), shader);
+            }
+        } else {
+            shader.setUniform("objectMatrix[" + 0 + "]", parentTransform.mul(node.transform));
+            glBindVertexArray(node.mesh.VAO);
+            glEnableVertexAttribArray(0);
+            glDrawArrays(GL_TRIANGLES, 0, node.mesh.triCount * 3);
         }
     }
 
@@ -714,8 +607,8 @@ public class Run {
         glCullFace(GL_BACK);
     }
 
-    private static double lerp(double a, double b, double t) {
-        return a + t * (b - a);
+    private static double lerp(double t) {
+        return 0.1 + t * ((double) 1 - 0.1);
     }
 
     public static void print(String text) {

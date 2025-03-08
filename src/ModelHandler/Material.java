@@ -53,10 +53,12 @@ public class Material {
     Vec subsurfaceColor = new Vec();
     Vec subsurfaceRadius = new Vec();
     //gLTF unique
+    double alphaCutoff = 0.1;
+    double emissiveStrength = 1;
     Boolean doubleSided = false;
 
     private static final Set<String> vecProperties = Set.of("Ka", "Kd", "Ks", "Tf", "Ke", "SubsurfaceColor", "SubsurfaceRadius");
-    private static final Set<String> doubleProperties = Set.of("Ns", "d", "Tr", "Ni", "Pm", "Pr", "Ps", "Pc", "Pcr", "aniso", "anisor", "Density", "subsurface");
+    private static final Set<String> doubleProperties = Set.of("Ns", "d", "Tr", "Ni", "Pm", "Pr", "Ps", "Pc", "Pcr", "aniso", "anisor", "Density", "subsurface", "alphaCutoff", "emissiveStrength");
     private static final Set<String> intProperties = Set.of("illum");
 
     public void print() {

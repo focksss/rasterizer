@@ -15,6 +15,7 @@ import Datatypes.Vec;
 import ModelHandler.Light;
 import ModelHandler.Material;
 import ModelHandler.Obj;
+import ModelHandler.gLTF;
 import io.github.mudbill.dds.DDSFile;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
@@ -30,7 +31,7 @@ import static org.lwjgl.stb.STBImage.stbi_load;
 import static org.lwjgl.system.MemoryUtil.*;
 
 public class World {
-
+    public List<gLTF> worldGLTFs = new ArrayList<>();
     public List<worldObject> worldObjects = new ArrayList<>();
     public List<worldLight> worldLights = new ArrayList<>();
     private List<Material> worldMaterials = new ArrayList<>();
@@ -55,12 +56,11 @@ public class World {
                         Object value = field.get(material);
                         if (value instanceof Number) {
                             materialData.put(((Number) value).floatValue());
-                        } else if (value instanceof Vec) {
-                            Vec vecValue = (Vec) value;
+                        } else if (value instanceof Vec vecValue) {
                             vecValue.updateFloats();
-                            materialData.put(vecValue.xf);
-                            materialData.put(vecValue.yf);
-                            materialData.put(vecValue.zf);
+                            materialData.put(Vec.xf);
+                            materialData.put(Vec.yf);
+                            materialData.put(Vec.zf);
                         } else if (value instanceof String) {
                             materialData.put((float) texturePaths.indexOf(value));
                         }
@@ -270,6 +270,20 @@ public class World {
         memFree(verticesBuffer);
         worldObjects.add(newWorldObject);
     }
+    public void addGLTF(gLTF object) {
+        worldGLTFs.add(object);
+        worldMaterials.addAll(gLTF.mtllib);
+        int lastNumMats = worldMaterials.size();
+        worldMaterials.addAll(gLTF.mtllib);
+        for (String texPath : gLTF.texturePaths) {
+            if(!texturePaths.contains(texPath)) {
+                texturePaths.add(texPath);
+            }
+        }
+        for (gLTF.Mesh mesh : gLTF.Meshes) {
+            mesh.initialize(lastNumMats);
+        }
+    }
     public void addLightsForObject(worldObject obj, float minDist) {
         Obj object = obj.object;
         List<Material> mats = object.mtllib;
@@ -299,6 +313,9 @@ public class World {
         for (Light l : newLights) {
             addLight(l);
         }
+    }
+    public void addLightsForScene(gLTF.Scene scene, float minDist) {
+
     }
     public void addLight(Light light) {
         worldLight newLight = new worldLight();
