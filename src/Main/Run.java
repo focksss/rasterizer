@@ -75,7 +75,7 @@ public class Run {
 
 
     public static void main(String[] args) {
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\grassblockGLTF");
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\grassblockGLTF2");
         //init();
         //runEngine();
 

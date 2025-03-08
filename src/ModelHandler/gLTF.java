@@ -2,9 +2,11 @@ package ModelHandler;
 import Datatypes.Triangle;
 import Datatypes.Vec;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
+import javax.lang.model.element.QualifiedNameable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -19,6 +21,7 @@ public class gLTF {
     List<Material> mtllib = new ArrayList<>();
     String[] gltfMatPropertiesMap = new String[]{"name", "baseColorFactor", "baseColorTexture", "metallicFactor", "roughnessFactor", "metallicTexture", "roughnessTexture"};
     String[] mtlPropertiesMap = new String[]{"name", "Kd", "map_Kd", "Pm", "Pr", "map_Pm", "map_Pr"};
+    Scene activeScene;
     List<Scene> Scenes = new ArrayList<>();
     List<Node> Nodes = new ArrayList<>();
     List<Mesh> Meshes = new ArrayList<>();
@@ -76,7 +79,7 @@ public class gLTF {
             JSONArray accessors = gltf.getJSONArray("accessors");
             for (int i = 0; i < accessors.length(); i++) {
                 JSONObject accessor = accessors.getJSONObject(i);
-                BufferView bufferView = BufferViews.get(accessor.getInt("buffer"));
+                BufferView bufferView = BufferViews.get(accessor.getInt("bufferView"));
                 int componentType = accessor.getInt("componentType");
                 int count = accessor.getInt("count");
                 String type = accessor.getString("type");
@@ -85,10 +88,63 @@ public class gLTF {
         //construct meshes
             JSONArray meshes = gltf.getJSONArray("meshes");
             for (int i = 0; i < meshes.length(); i++) {
+                List<Accessor> positionAttributes = new ArrayList<>();
+                List<Accessor> normalAttributes = new ArrayList<>();
+                List<Accessor> texCoordAttributes = new ArrayList<>();
+                List<Accessor> indices = new ArrayList<>();
+                List<Integer> materialIndices = new ArrayList<>();
                 JSONObject mesh = meshes.getJSONObject(i);
                 String meshName = mesh.getString("name");
-
+                JSONArray primitives = mesh.getJSONArray("primitives");
+                for (int j = 0; j < primitives.length(); j++) {
+                    JSONObject primitiveSet = primitives.getJSONObject(j);
+                    JSONObject attributes = primitiveSet.getJSONObject("attributes");
+                    for (String key : attributes.keySet()) {
+                        if (key.equals("POSITION")) positionAttributes.add(Accessors.get(attributes.getInt(key)));
+                        else if (key.equals("NORMAL")) normalAttributes.add(Accessors.get(attributes.getInt(key)));
+                        else if (key.equals("TEXCOORD_0")) texCoordAttributes.add(Accessors.get(attributes.getInt(key)));
+                    }
+                    indices.add(Accessors.get(primitiveSet.getInt("indices")));
+                    materialIndices.add(primitiveSet.getInt("material"));
+                }
+                Meshes.add(new Mesh(meshName, positionAttributes, normalAttributes, texCoordAttributes, indices, materialIndices));
             }
+        //construct nodes
+            JSONArray nodes = gltf.getJSONArray("nodes");
+            for (int i = 0; i < nodes.length(); i++) {
+                JSONObject node = nodes.getJSONObject(i);
+                Mesh mesh = Meshes.get(node.getInt("mesh"));
+                String name = node.getString("name");
+                Matrix4f transform = new Matrix4f().identity();
+                if (node.has("scale")) {
+                    JSONArray scale = node.getJSONArray("scale");
+                    transform.scale(scale.getLong(0), scale.getLong(1), scale.getLong(2));
+                }
+                if (node.has("rotation")) {
+                    JSONArray rotation = node.getJSONArray("rotation");
+                    Quaternionf quaternionRotation = new Quaternionf(rotation.getLong(0), rotation.getLong(1), rotation.getLong(2), rotation.getLong(3));
+                    transform.rotate(quaternionRotation);
+                }
+                if (node.has("translation")) {
+                    JSONArray translation = node.getJSONArray("translation");
+                    transform.translate(translation.getLong(0), translation.getLong(1), translation.getLong(2));
+                }
+                Nodes.add(new Node(name, mesh, transform));
+            }
+        //construct scenes
+            JSONArray scenes = gltf.getJSONArray("scenes");
+            for (int i = 0; i < scenes.length(); i++) {
+                JSONObject scene = scenes.getJSONObject(i);
+                String name = scene.getString("name");
+                JSONArray sceneNodes = scene.getJSONArray("nodes");
+                List<Node> nodesList = new ArrayList<>();
+                for (int j = 0; j < nodes.length(); j++) {
+                    nodesList.add(Nodes.get(sceneNodes.getInt(j)));
+                }
+                Scenes.add(new Scene(name, nodesList));
+            }
+        //set active scene
+            activeScene = Scenes.get(gltf.getInt("scene"));
 
         //get textures
             List<String> textureSources = new ArrayList<>();
@@ -158,26 +214,28 @@ public class gLTF {
         Mesh mesh;
         Matrix4f transform = new Matrix4f().identity();
 
-        public Node(String name, Mesh mesh) {
+        public Node(String name, Mesh mesh, Matrix4f transform) {
             this.name = name;
             this.mesh = mesh;
-        }
-        public void setTransform(Matrix4f transform) {
             this.transform = transform;
         }
     }
     public static class Mesh {
         String name;
-        Accessor positionAttribute;
-        Accessor normalAttribute;
-        Accessor texCoordAttribute;
+        List<Accessor> positionAttribute;
+        List<Accessor> normalAttribute;
+        List<Accessor> texCoordAttribute;
+        List<Integer> material;
+        List<Accessor> indices;
         List<Triangle> triangles;
 
-        public Mesh(String name, Accessor positionAttribute, Accessor normalAttribute, Accessor texCoordAttribute) {
+        public Mesh(String name, List<Accessor> positionAttribute, List<Accessor> normalAttribute, List<Accessor> texCoordAttribute, List<Accessor> indices, List<Integer> material) {
             this.name = name;
             this.positionAttribute = positionAttribute;
             this.normalAttribute = normalAttribute;
             this.texCoordAttribute = texCoordAttribute;
+            this.material = material;
+            this.indices = indices;
         }
     }
 //replaced by my material class
