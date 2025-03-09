@@ -152,6 +152,13 @@ public class Vec {
         return out;
     }
 
+    public void shrinkTo(Vec a) {
+        x = Math.min(x, a.x); y = Math.min(y, a.y); z = Math.min(z, a.z);
+    }
+    public void growTo(Vec a) {
+        x = Math.max(x, a.x); y = Math.max(y, a.y); z = Math.max(z, a.z);
+    }
+
     public Vec rotate(Vec rot) {
         double rx = rot.x;
         double ry = rot.y;

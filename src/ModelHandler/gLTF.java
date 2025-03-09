@@ -55,9 +55,6 @@ public class gLTF {
                 File[] gltfs = gltfDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".gltf"));
                 assert gltfs != null;
                 gltfFile = gltfs[0];
-                File[] bins = gltfDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".bin"));
-                assert bins != null;
-                binFile = bins[0];
             }
 
         //get gltf content
@@ -93,7 +90,16 @@ public class gLTF {
                 int componentType = accessor.getInt("componentType");
                 int count = accessor.getInt("count");
                 String type = accessor.getString("type");
-                Accessors.add(new Accessor(bufferView, componentType, count, type));
+                Accessor newAccessor = new Accessor(bufferView, componentType, count, type);
+                if (accessor.has("min")) {
+                    JSONArray min = accessor.getJSONArray("min");
+                    newAccessor.setMin(new Vec(min.getNumber(0).floatValue(), min.getNumber(1).floatValue(), min.getNumber(2).floatValue()));
+                }
+                if (accessor.has("max")) {
+                    JSONArray max = accessor.getJSONArray("max");
+                    newAccessor.setMax(new Vec(max.getNumber(0).floatValue(), max.getNumber(1).floatValue(), max.getNumber(2).floatValue()));
+                }
+                Accessors.add(newAccessor);
             }
         //construct meshes
             JSONArray meshes = gltf.getJSONArray("meshes");
@@ -149,7 +155,6 @@ public class gLTF {
                         childrenNodes.add(Nodes.get(children.getInt(j)));
                     }
                     Nodes.add(new Node(name, childrenNodes, transform));
-                    System.out.println("added " + childrenNodes.size() + " nodes to " + name);
                 }
             }
         //construct scenes
@@ -264,6 +269,8 @@ public class gLTF {
             // Process each primitive set (position, normal, texCoord, indices, material)
             for (int i = 0; i < mesh.positionAttribute.size(); i++) {
                 Accessor posAcc = mesh.positionAttribute.get(i);
+//                mesh.min.shrinkTo(posAcc.min);
+//                mesh.max.growTo(posAcc.max);
                 Accessor normAcc = null;
                 Accessor texAcc = null;
 
@@ -373,6 +380,14 @@ public class gLTF {
 //                    v3.println();
                 }
             }
+            for (Triangle tri : mesh.triangles) {
+                mesh.max.growTo(tri.v1);
+                mesh.max.growTo(tri.v2);
+                mesh.max.growTo(tri.v3);
+                mesh.min.shrinkTo(tri.v1);
+                mesh.min.shrinkTo(tri.v2);
+                mesh.min.shrinkTo(tri.v3);
+            }
         }
     }
 
@@ -414,6 +429,8 @@ public class gLTF {
         public int VAO;
         public int VBO;
         public int triCount = 0;
+        public Vec min = new Vec(Double.MAX_VALUE);
+        public Vec max = new Vec(Double.MIN_VALUE);
 
         public Mesh(String name, List<Accessor> positionAttribute, List<Accessor> normalAttribute, List<Accessor> texCoordAttribute, List<Accessor> indices, List<Integer> material) {
             this.name = name;
@@ -430,7 +447,7 @@ public class gLTF {
             FloatBuffer verticesBuffer = MemoryUtil.memAllocFloat(45*triangles.size());
 
             int totalTriangles = triangles.size();
-            int progressInterval = Math.max(totalTriangles / 10, 1); // Update every 10% or at least every 1 triangle
+            int progressInterval = Math.max(totalTriangles / 10, 1);
             for (int i = 0; i < totalTriangles; i++) {
                 Triangle triangle = triangles.get(i);
                 triCount++;
@@ -521,8 +538,8 @@ public class gLTF {
         BufferView bufferView;
         int componentType;
         int count;
-        float[] max;
-        float[] min;
+        Vec max = new Vec(Double.MIN_VALUE);
+        Vec min = new Vec(Double.MAX_VALUE);
         String type;
 
         public Accessor(BufferView bufferView, int componentType, int count, String type) {
@@ -531,11 +548,11 @@ public class gLTF {
             this.count = count;
             this.type = type;
         }
-        public void setMax(float[] max) {
-            this.max = max;
-        }
-        public void setMin(float[] min) {
+        public void setMin(Vec min) {
             this.min = min;
+        }
+        public void setMax(Vec max) {
+            this.max = max;
         }
     }
     public static class BufferView {

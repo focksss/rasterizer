@@ -4,6 +4,7 @@ import Datatypes.Shader;
 import ModelHandler.gLTF;
 import Datatypes.Vec;
 import ModelHandler.Light;
+import org.joml.Vector4f;
 import org.lwjgl.opengl.GL;
 
 import java.awt.*;
@@ -62,6 +63,7 @@ public class Run {
     public static float aspectRatio = (float) WIDTH / HEIGHT;
     public static float nearPlane = 0.001f, farPlane = 10000.0f;
     public static Matrix4f projectionMatrix;
+    public static Matrix4f viewMatrix;
     public static String skyboxPath = "C:\\Graphics\\assets\\belfast_sunset.jpg";
     private static final String shaderPath = "C:\\Graphics\\rasterizer\\src\\shaders\\";
 
@@ -71,6 +73,8 @@ public class Run {
 
     private static final List<String> lines = new ArrayList<>();
     private static JTextArea textArea;
+
+    static List<Plane> frustumPlanes;
 
 
     public static void main(String[] args) {
@@ -91,6 +95,9 @@ public class Run {
         System.out.println();
         int frames = 0;
         long lastTime = System.nanoTime();
+
+        //feeble attempt to fix SSAO simply not happening sometimes...
+        renderToQuad(SSAOblurTex);
 
         while (!glfwWindowShouldClose(window)) {
             long startTime = System.nanoTime();
@@ -120,11 +127,11 @@ public class Run {
     }
 
     public static void createWorld() {
-        world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistroGLTF");
+        //world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\grassblockGLTF");
         world.addGLTF(newObject);
 
-        world.worldObjects.get(0).newInstance();
+        //world.worldObjects.get(0).newInstance();
 
         Light newLight = new Light(1);
         newLight.setProperty("direction", new Vec(.15, -.75, -.5));
@@ -151,7 +158,7 @@ public class Run {
         glClearColor(0.0f, 0.0f, 0.0f, -1);
         glClearTexImage(gPosition, 0, GL_RGBA, GL_FLOAT, new float[]{Float.POSITIVE_INFINITY,0,0,0});
         glEnable(GL_DEPTH_TEST);
-        drawScene(geometryShader);
+        drawScene(geometryShader, true);
 
         //ssao generation pass
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);
@@ -255,7 +262,7 @@ public class Run {
         MemoryUtil.memFree(width);
         MemoryUtil.memFree(height);
 
-        Matrix4f viewMatrix = new Matrix4f();
+        viewMatrix = new Matrix4f();
         viewMatrix.identity()
                 .rotateX(controller.cameraRot.xF).rotateY(-controller.cameraRot.yF).rotateZ(-controller.cameraRot.zF)
                 .translate(new Vector3f(controller.cameraPos.xF, -controller.cameraPos.yF, controller.cameraPos.zF));
@@ -265,6 +272,8 @@ public class Run {
         projectionMatrix.identity()
                 .setPerspective((float) Math.toRadians(FOV), aspectRatio, nearPlane, farPlane, false);
         geometryShader.setUniform("projectionMatrix", projectionMatrix);
+
+        frustumPlanes = getFrustumPlanes();
 
         lightingShader.setUniform("camPos", controller.cameraPos);
         lightingShader.setUniform("camRot", controller.cameraRot);
@@ -559,7 +568,7 @@ public class Run {
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
-    private static void drawScene(Shader shader) {
+    private static void drawScene(Shader shader, boolean doFrustumCull) {
         for (World.worldObject obj : world.worldObjects) {
             for (int i = 0; i < obj.numInstances; i++) {
                 shader.setUniform("objectMatrix[" + i + "]", obj.transforms.get(i));
@@ -571,21 +580,106 @@ public class Run {
         for (gLTF ignored : world.worldGLTFs) {
             gLTF.Scene scene = gLTF.activeScene;
             for (gLTF.Node node : scene.nodes) {
-                renderNode(node, new Matrix4f().identity(), shader);
+                renderNode(node, new Matrix4f().identity(), shader, doFrustumCull);
             }
         }
     }
-    private static void renderNode(gLTF.Node node, Matrix4f parentTransform, Shader shader) {
+    private static void renderNode(gLTF.Node node, Matrix4f parentTransform, Shader shader, boolean doFrustumCull) {
+        Matrix4f worldTransform = parentTransform.mul(node.transform, new Matrix4f());
         if (node.mesh == null) {
             for (gLTF.Node childNode : node.children) {
-                renderNode(childNode, parentTransform.mul(node.transform), shader);
+                renderNode(childNode, worldTransform, shader, doFrustumCull);
             }
-        } else {
-            shader.setUniform("objectMatrix[" + 0 + "]", parentTransform.mul(node.transform));
+        } else if (!doFrustumCull || boxInFrustum(node.mesh.min, node.mesh.max, frustumPlanes, worldTransform)) {
+            shader.setUniform("objectMatrix[" + 0 + "]", worldTransform);
             glBindVertexArray(node.mesh.VAO);
             glEnableVertexAttribArray(0);
             glDrawArrays(GL_TRIANGLES, 0, node.mesh.triCount * 3);
         }
+    }
+    private static class Plane {
+        public Vec normal;
+        public Vec point;
+        public Plane(Vec normal, Vec point) {
+            this.normal = normal;
+            this.point = point;
+        }
+        public boolean pointContained(Vec point) {
+            double signedDistance = normal.dot(point.sub(this.point));
+            return signedDistance >= 0;
+        }
+    }
+    private static List<Plane> getFrustumPlanes() {
+        List<Plane> planes = new ArrayList<>();
+        double vSide = Math.abs(Math.tan((FOV*0.5)*Math.PI/180)*farPlane);
+        double hSide = aspectRatio*vSide;
+
+        double a = Math.sqrt((hSide * hSide)*0.25);
+        double b = Math.sqrt((vSide * vSide)*0.25);
+
+        Vec lNorm = new Vec(farPlane / a, 0 , (hSide*0.5)/a).rotate(controller.cameraRot);
+        Vec rNorm = new Vec(-farPlane / a, 0 , (hSide*0.5)/a).rotate(controller.cameraRot);
+
+        Vec bNorm = new Vec(0, farPlane/b, vSide/(2*b));
+        Vec tNorm = (bNorm.mult(new Vec(1,-1,1))).rotate(controller.cameraRot);
+        bNorm = bNorm.rotate(controller.cameraRot);
+
+        Vec nNorm = new Vec(0,0,1).rotate(controller.cameraRot);
+        Vec fNorm = nNorm.mult(-1);
+
+        planes.add(new Plane(nNorm, controller.cameraPos));
+        planes.add(new Plane(fNorm, controller.cameraPos.add(nNorm.mult(farPlane))));
+        planes.add(new Plane(lNorm, controller.cameraPos));
+        planes.add(new Plane(rNorm, controller.cameraPos));
+        planes.add(new Plane(bNorm, controller.cameraPos));
+        planes.add(new Plane(tNorm, controller.cameraPos));
+        return planes;
+    }
+    private static boolean boxInFrustum(Vec min, Vec max, List<Plane> frustumPlanes, Matrix4f worldTransform) {
+        List<Vec> boxPoints = new ArrayList<>();
+        boxPoints.add(min);
+        boxPoints.add(max);
+        boxPoints.add(new Vec(max.x, min.y, min.z));
+        boxPoints.add(new Vec(max.x, min.y, max.z));
+        boxPoints.add(new Vec(min.x, min.y, max.z));
+        boxPoints.add(new Vec(min.x, max.y, min.z));
+        boxPoints.add(new Vec(max.x, max.y, min.z));
+        boxPoints.add(new Vec(min.x, max.y, max.z));
+        for (int i = 0; i < 8; i++) {
+            Vector4f newPoint = new Vector4f(boxPoints.get(i).toVec3f(),1).mul(worldTransform);
+            boxPoints.set(i, new Vec(newPoint.x, newPoint.y, newPoint.z));
+        }
+        boxPoints.get(0).println();
+        boxPoints.get(1).println();
+        /*
+        int passes = 0;
+        for (Plane plane : frustumPlanes) {
+            for (Vec point : boxPoints) {
+                if (plane.pointContained(point)) {
+                    passes++; break;
+                }
+            }
+        }
+        return passes == 6;
+        */
+        System.out.println("...");
+//        System.out.println(frustumPlanes.get(0).pointContained(new Vec(0)));
+//        System.out.println(frustumPlanes.get(1).pointContained(new Vec(0)));
+//        System.out.println(frustumPlanes.get(2).pointContained(new Vec(0)));
+//        System.out.println(frustumPlanes.get(3).pointContained(new Vec(0)));
+//        System.out.println(frustumPlanes.get(4).pointContained(new Vec(0)));
+//        System.out.println(frustumPlanes.get(5).pointContained(new Vec(0)));
+        for (int i = 0; i < 6; i++) {
+            boolean inside = false;
+            for (Vec point : boxPoints) {
+                if (frustumPlanes.get(i).pointContained(point)) {
+                    inside = true;
+                    break;
+                }
+            }
+            if (!inside) return false;
+        }
+        return true;
     }
 
     private static void generateShadowMaps() {
@@ -602,7 +696,7 @@ public class Run {
                 shadowShader.setUniform("lightSpaceMatrix", light.lightSpaceMatrix);
 
                 glEnable(GL_DEPTH_TEST);
-                drawScene(shadowShader);
+                drawScene(shadowShader, false);
             }
         }
         glCullFace(GL_BACK);
