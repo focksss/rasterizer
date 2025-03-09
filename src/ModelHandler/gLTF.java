@@ -61,7 +61,7 @@ public class gLTF {
             assert gltfFile != null;
             Path gltfFilePath = gltfFile.toPath();
             String gltfContent = new String(Files.readAllBytes(gltfFilePath));
-            //System.out.println(gltfContent);
+            System.out.println(gltfContent);
             gltf = new JSONObject(gltfContent);
 
         //construct buffers
@@ -266,31 +266,25 @@ public class gLTF {
 
     public void constructPrimitives() {
         for (Mesh mesh : Meshes) {
-            // Process each primitive set (position, normal, texCoord, indices, material)
             for (int i = 0; i < mesh.positionAttribute.size(); i++) {
                 Accessor posAcc = mesh.positionAttribute.get(i);
-//                mesh.min.shrinkTo(posAcc.min);
-//                mesh.max.growTo(posAcc.max);
+                mesh.min.shrinkTo(posAcc.min);
+                mesh.max.growTo(posAcc.max);
                 Accessor normAcc = null;
                 Accessor texAcc = null;
 
-                // Get normal accessor if available
                 if (i < mesh.normalAttribute.size()) {
                     normAcc = mesh.normalAttribute.get(i);
                 }
 
-                // Get texture coordinate accessor if available
                 if (i < mesh.texCoordAttribute.size()) {
                     texAcc = mesh.texCoordAttribute.get(i);
                 }
 
-                // Get indices accessor
                 Accessor indAcc = mesh.indices.get(i);
 
-                // Get material index
                 int materialIndex = mesh.material.get(i);
 
-                // Cache position data
                 List<Vec> positions = new ArrayList<>();
                 ByteBuffer posBuffer = posAcc.bufferView.buffer.buffer;
                 posBuffer.position(posAcc.bufferView.byteOffset);
@@ -302,7 +296,6 @@ public class gLTF {
                     positions.add(new Vec(x, y, z));
                 }
 
-                // Cache normal data if available
                 List<Vec> normals = new ArrayList<>();
                 if (normAcc != null) {
                     ByteBuffer normBuffer = normAcc.bufferView.buffer.buffer;
@@ -316,7 +309,6 @@ public class gLTF {
                     }
                 }
 
-                // Cache texture coordinate data if available
                 List<Vec> texCoords = new ArrayList<>();
                 if (texAcc != null) {
                     ByteBuffer texBuffer = texAcc.bufferView.buffer.buffer;
@@ -325,11 +317,10 @@ public class gLTF {
                     for (int j = 0; j < texAcc.count; j++) {
                         float u = texBuffer.getFloat();
                         float v = texBuffer.getFloat();
-                        texCoords.add(new Vec(u, v, 0)); // Z component set to 0 for texture coordinates
+                        texCoords.add(new Vec(u, v));
                     }
                 }
 
-                // Read indices and create triangles
                 ByteBuffer indBuffer = indAcc.bufferView.buffer.buffer;
                 indBuffer.position(indAcc.bufferView.byteOffset);
 
@@ -338,7 +329,6 @@ public class gLTF {
                 for (int j = 0; j < triangleCount; j++) {
                     int idx1, idx2, idx3;
 
-                    // Read indices based on component type
                     if (indAcc.componentType == 5123) { // UNSIGNED_SHORT
                         idx1 = indBuffer.getShort() & 0xFFFF;
                         idx2 = indBuffer.getShort() & 0xFFFF;
@@ -352,41 +342,24 @@ public class gLTF {
                         idx2 = indBuffer.get() & 0xFF;
                         idx3 = indBuffer.get() & 0xFF;
                     } else {
-                        // Unsupported index type
                         continue;
                     }
 
-                    // Get position vectors
                     Vec v1 = positions.get(idx1);
                     Vec v2 = positions.get(idx2);
                     Vec v3 = positions.get(idx3);
 
-                    // Get normal vectors (or default)
                     Vec n1 = normals.isEmpty() ? new Vec(0, 0, 1) : normals.get(idx1);
                     Vec n2 = normals.isEmpty() ? new Vec(0, 0, 1) : normals.get(idx2);
                     Vec n3 = normals.isEmpty() ? new Vec(0, 0, 1) : normals.get(idx3);
 
-                    // Get texture coordinates (or default)
                     Vec tc1 = texCoords.isEmpty() ? new Vec(0, 0, 0) : texCoords.get(idx1);
                     Vec tc2 = texCoords.isEmpty() ? new Vec(0, 0, 0) : texCoords.get(idx2);
                     Vec tc3 = texCoords.isEmpty() ? new Vec(0, 0, 0) : texCoords.get(idx3);
 
-                    // Create and add triangle
                     Triangle triangle = new Triangle(v1, v2, v3, n1, n2, n3, tc1, tc2, tc3, materialIndex);
                     mesh.addTriangle(triangle);
-//                    System.out.println("new triangle");
-//                    Mesh.triangles.get(j).v1.println();
-//                    v2.println();
-//                    v3.println();
                 }
-            }
-            for (Triangle tri : mesh.triangles) {
-                mesh.max.growTo(tri.v1);
-                mesh.max.growTo(tri.v2);
-                mesh.max.growTo(tri.v3);
-                mesh.min.shrinkTo(tri.v1);
-                mesh.min.shrinkTo(tri.v2);
-                mesh.min.shrinkTo(tri.v3);
             }
         }
     }
