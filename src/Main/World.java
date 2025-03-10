@@ -83,7 +83,7 @@ public class World {
         int counter = 0;
         for (String path : texturePaths) {
             counter++;
-            System.out.print("\ruploading texture (" + counter + "/" + texturePaths.size() + ") from " + path + "...");
+            System.out.print("\rloading texture (" + counter + "/" + texturePaths.size() + ") from " + path + "...");
             int textureID = 0;
 
             if (path.endsWith(".dds")) {
@@ -91,11 +91,11 @@ public class World {
                 try {
                     ddsFile = new DDSFile(path);
                     textureID = glGenTextures();
-                    glActiveTexture(GL13.GL_TEXTURE0);     // Depends on your implementation
-                    glBindTexture(GL11.GL_TEXTURE_2D, textureID);
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, textureID);
                     for (int level = 0; level < ddsFile.getMipMapCount(); level++)
-                        GL13.glCompressedTexImage2D(
-                                GL11.GL_TEXTURE_2D,
+                        glCompressedTexImage2D(
+                                GL_TEXTURE_2D,
                                 level,
                                 ddsFile.getFormat(),
                                 ddsFile.getWidth(level),
@@ -103,15 +103,16 @@ public class World {
                                 0,
                                 ddsFile.getBuffer(level)
                         );
-                    GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-                    GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, ddsFile.getMipMapCount() - 1);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, ddsFile.getMipMapCount() - 1);
                 } catch (FileNotFoundException e) {
                     throw new RuntimeException(e);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             } else {
-                textureID = glCreateTextures(GL_TEXTURE_2D);
+                textureID = glGenTextures();
+                glBindTexture(GL_TEXTURE_2D, textureID);
                 IntBuffer width = MemoryUtil.memAllocInt(1);
                 IntBuffer height = MemoryUtil.memAllocInt(1);
                 IntBuffer channels = MemoryUtil.memAllocInt(1);
@@ -120,14 +121,12 @@ public class World {
                     System.err.println("could not load image " + path);
                     continue;
                 }
-                glTextureStorage2D(textureID, 1, GL_RGBA8, width.get(0), height.get(0));
-                glTextureSubImage2D(textureID, 0, 0, 0, width.get(0), height.get(0), GL_RGBA, GL_UNSIGNED_BYTE, image);
-                glTextureParameteri(textureID, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width.get(0), height.get(0), 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+                glGenerateMipmap(GL_TEXTURE_2D);
                 glTextureParameteri(textureID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-                glGenerateMipmap(GL_TEXTURE_2D);
 
                 stbi_image_free(image);
                 MemoryUtil.memFree(width);
