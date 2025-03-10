@@ -119,7 +119,7 @@ public class Vec {
     public static Vec mean(List<Vec> list) {
         Vec sum = new Vec(0, 0, 0);
         for (int i = 0; i < list.size(); i++) {
-            sum.add(list.get(i));
+            sum = sum.add(list.get(i));
         }
         return sum.div(list.size());
     }

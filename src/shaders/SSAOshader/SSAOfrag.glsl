@@ -11,7 +11,7 @@ uniform vec3 samples[64];
 
 int kernelSize = 64;
 uniform float radius;
-uniform float bias;
+//uniform float bias;
 
 float width;
 float height;
@@ -21,6 +21,7 @@ vec2 noiseScale = vec2(width/4.0, height/4.0);
 uniform mat4 projection;
 
 void main() {
+    float bias = 0.001;
     vec3 fragPos = texture(gViewPosition, texCoord).xyz;
     vec3 normal = normalize(texture(gNormal, texCoord).rgb-0.5)*2;
     vec3 randomVec = normalize(texture(texNoise, texCoord * noiseScale).xyz);

@@ -18,10 +18,12 @@ import ModelHandler.Obj;
 import ModelHandler.gLTF;
 import io.github.mudbill.dds.DDSFile;
 import org.joml.Matrix4f;
+import org.joml.Vector4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 import org.lwjgl.system.MemoryUtil;
 
+import static Main.Run.lerp;
 import static org.lwjgl.opengl.ARBBindlessTexture.*;
 import static org.lwjgl.opengl.ARBUniformBufferObject.glBindBufferBase;
 import static org.lwjgl.opengl.GL20.*;
@@ -150,6 +152,7 @@ public class World {
         FloatBuffer lightData = MemoryUtil.memAllocFloat(worldLights.size() * 22);
         for (worldLight wlight : worldLights) {
             Light light = wlight.light;
+            //worldObjects.get(0).newInstance(new Vec(0.1), light.position, new Vec(0));
             for (Field field : light.getClass().getDeclaredFields()) {
                 field.setAccessible(true);
                 try {
@@ -173,6 +176,7 @@ public class World {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightDataSSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER, lightData, GL_STATIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, lightDataSSBO);
+        System.out.println(lightData.capacity() / 22);
         memFree(lightData);
 
         LongBuffer shadowmapHandles = MemoryUtil.memAllocLong(worldLights.size());
@@ -288,55 +292,73 @@ public class World {
         Obj object = obj.object;
         List<Material> mats = object.mtllib;
         List<Light> newLights = new ArrayList<>();
-        for (Triangle tri : object.triangles) {
-            addLightsForTriangleSet(minDist, mats, newLights, tri);
-        }
+        addLightsForTriangleSet(minDist, mats, newLights, object.triangles, new Matrix4f().identity());
         for (Light l : newLights) {
             addLight(l);
         }
     }
     public void addLightsForScene(gLTF object, int scene, float minDist) {
         gLTF.Scene operatingScene = gLTF.Scenes.get(scene);
+        List<Light> newLights = new ArrayList<>();
         for (gLTF.Node node : operatingScene.nodes) {
-            addLightsForNode(node, minDist, gLTF.mtllib);
+            addLightsForNode(node, minDist, gLTF.mtllib, newLights, new Matrix4f().identity());
+        }
+        for (Light l : newLights) {
+            addLight(l);
         }
     }
-    private void addLightsForNode(gLTF.Node node, float minDist, List<Material> mats) {
+    private void addLightsForNode(gLTF.Node node, float minDist, List<Material> mats, List<Light> newLights, Matrix4f parentTransform) {
+        Matrix4f worldTransform = parentTransform.mul(node.transform, new Matrix4f());
         if (node.mesh == null) {
             for (gLTF.Node child : node.children) {
-                addLightsForNode(child, minDist, mats);
+                addLightsForNode(child, minDist, mats, newLights, worldTransform);
             }
         } else {
-            List<Light> newLights = new ArrayList<>();
-            for (Triangle tri : node.mesh.triangles) {
-                addLightsForTriangleSet(minDist, mats, newLights, tri);
-            }
-            for (Light l : newLights) {
-                addLight(l);
+            addLightsForTriangleSet(minDist, mats, newLights, node.mesh.triangles, worldTransform);
+        }
+    }
+    private void addLightsForTriangleSet(float minDist, List<Material> mats, List<Light> newLights, List<Triangle> tris, Matrix4f parentTransform) {
+        List<Vec> emissiveVertices = new ArrayList<>();
+        List<Triangle> emissiveTriangles = new ArrayList<>();
+        List<Vec> emissionColors = new ArrayList<>();
+        List<Double> emissiveStrengths = new ArrayList<>();
+        for (Triangle tri : tris) {
+            Material thisMtl = mats.get(tri.material);
+            if (thisMtl.Ke.magnitude() > 0) {
+                Vector4f pos4f = parentTransform.transform(new Vector4f(tri.v1.toVec3f(), 1));
+                Vec pos = new Vec(pos4f.x, pos4f.y, pos4f.z);
+                boolean willAdd = true;
+                for (Light l : newLights) {
+                    if (l.position.dist(pos) < minDist) {
+                        willAdd = false;
+                        break;
+                    }
+                }
+                if (willAdd) {
+                    double E = thisMtl.emissiveStrength;
+                    double[] atten = computeAttenuation(E * 0.5);
+                    Light newLight1 = new Light(0);
+                    newLight1.setProperty("position", pos);
+                    newLight1.setProperty("constantAttenuation", 1);
+                    newLight1.setProperty("linearAttenuation", 0.5);
+                    newLight1.setProperty("quadraticAttenuation", 0.3/((E*E)/100));
+                    newLight1.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
+                    newLight1.setProperty("diffuse", new Vec(thisMtl.Ke).mult(E));
+                    newLight1.setProperty("specular", new Vec(1, 1, 1));
+
+                    newLights.add(newLight1);
+                }
             }
         }
     }
-    private void addLightsForTriangleSet(float minDist, List<Material> mats, List<Light> newLights, Triangle tri) {
-        Material thisMtl = mats.get(tri.material);
-        if (thisMtl.Ke.magnitude() > 0) {
-            Vec pos = new Vec(tri.v1);
-            boolean willAdd = true;
-            for (Light l : newLights) {
-                if (l.position.dist(pos) < minDist) {willAdd = false; break;}
-            }
-            if (willAdd) {
-                Light newLight1 = new Light(0);
-                newLight1.setProperty("position", pos);
-                newLight1.setProperty("constantAttenuation", 1);
-                newLight1.setProperty("linearAttenuation", 2);
-                newLight1.setProperty("quadraticAttenuation", 0.5);
-                newLight1.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
-                newLight1.setProperty("diffuse", new Vec(thisMtl.Ke.mult(thisMtl.emissiveStrength)));
-                newLight1.setProperty("specular", new Vec(1, 1, 1));
+    public static double[] computeAttenuation(double range) {
+        double intensityThreshold = 0.01; // Light is nearly gone at max range
 
-                newLights.add(newLight1);
-            }
-        }
+        // Solve for K_l and K_q such that attenuation is ~0.01 at max range
+        double K_q = intensityThreshold / (range * range);  // Quadratic term
+        double K_l = (1.0 - K_q * range * range) / range;   // Linear term
+
+        return new double[]{K_l, K_q};
     }
 
     public void addLight(Light light) {

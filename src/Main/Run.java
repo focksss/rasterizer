@@ -44,7 +44,7 @@ public class Run {
             geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader;
     public static long window, FPS = 240;
 
-    public static float EXPOSURE = 5f;
+    public static float EXPOSURE = 1f;
     public static float GAMMA = 1;
     public static boolean doSSAO = true;
     public static float SSAOradius = 0.6f;
@@ -64,7 +64,7 @@ public class Run {
     public static float nearPlane = 0.001f, farPlane = 10000.0f;
     public static Matrix4f projectionMatrix;
     public static Matrix4f viewMatrix;
-    public static String skyboxPath = "C:\\Graphics\\assets\\belfast_sunset.jpg";
+    public static String skyboxPath = "C:\\Graphics\\assets\\the_sky_is_on_fire_4k.hdr";
     private static final String shaderPath = "C:\\Graphics\\rasterizer\\src\\shaders\\";
 
     public static World world;
@@ -85,7 +85,7 @@ public class Run {
         //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
     }
     public static void runEngine() {
-        controller = new Controller(new Vec(0), new Vec(0), window);
+        controller = new Controller(new Vec(11.05, 2.71, 2.47), new Vec(0.06, -1.6, 0), window);
         world = new World();
         createWorld();
         world.updateWorld();
@@ -127,11 +127,9 @@ public class Run {
     }
 
     public static void createWorld() {
-        //world.addObject("C:\\Graphics\\assets\\grassblock1", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\sponzaGLTF");
+        world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2");
         world.addGLTF(newObject);
-
-        //world.worldObjects.get(0).newInstance();
 
         Light newLight = new Light(1);
         newLight.setProperty("direction", new Vec(.15, -.75, -.5));
@@ -142,7 +140,7 @@ public class Run {
         newLight.setProperty("linearAttenuation", 0.09);
         newLight.setProperty("quadraticAttenuation", 0.032);
         newLight.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
-        newLight.setProperty("diffuse", new Vec(1, 0.9, 0.5));
+        newLight.setProperty("diffuse", new Vec(0.98, 0.84, 0.64).mult(5));
         newLight.setProperty("specular", new Vec(1, 1, 1));
         world.addLight(newLight);
 
@@ -499,7 +497,7 @@ public class Run {
         SSAOkernal = new Vec[64];
         for (int i = 0; i < 64; i++) {
             double scale = (double) i / 64;
-            scale = lerp(scale * scale);
+            scale = lerp(scale * scale, 0.1, 1);
             SSAOkernal[i] = new Vec(
                     Math.random() * 2 - 1,
                     Math.random() * 2 - 1,
@@ -532,12 +530,12 @@ public class Run {
         IntBuffer width = MemoryUtil.memAllocInt(1);
         IntBuffer height = MemoryUtil.memAllocInt(1);
         IntBuffer channels = MemoryUtil.memAllocInt(1);
-        ByteBuffer image = stbi_load(imagePath, width, height, channels, 4);
+        FloatBuffer image = stbi_loadf(imagePath, width, height, channels, 4);
         if (image == null) {
             System.err.println("could not load image " + imagePath);
             return;
         }
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width.get(0), height.get(0), 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width.get(0), height.get(0), 0, GL_RGBA, GL_FLOAT, image);
         glGenerateMipmap(GL_TEXTURE_2D);
         stbi_image_free(image);
         MemoryUtil.memFree(width);
@@ -691,8 +689,8 @@ public class Run {
         glCullFace(GL_BACK);
     }
 
-    private static double lerp(double t) {
-        return 0.1 + t * ((double) 1 - 0.1);
+    public static double lerp(double t, double a, double b) {
+        return a + t * ((double) b - a);
     }
 
     public static void print(String text) {

@@ -70,6 +70,13 @@ public class Triangle {
         this.bt3 = bitangent;
     }
 
+    public double area() {
+        Vec AB = v2.sub(v1);
+        Vec AC = v3.sub(v1);
+        Vec crossProduct = AB.cross(AC);
+        return Math.abs(0.5 * crossProduct.magnitude());
+    }
+
     public static List<Triangle> dataToTris(List<Vec> vertices, List<Vec> normals, List<Vec> texCoords, List<Vec> vertexIndices, List<Vec> normalIndices, List<Vec> texCoordIndices, List<Integer> materialIndices) {
         List<Triangle> triangles = new ArrayList<Triangle>();
         for (int counter = 0; counter < vertexIndices.size(); counter++) {

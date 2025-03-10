@@ -61,7 +61,7 @@ public class gLTF {
             assert gltfFile != null;
             Path gltfFilePath = gltfFile.toPath();
             String gltfContent = new String(Files.readAllBytes(gltfFilePath));
-            System.out.println(gltfContent);
+            //System.out.println(gltfContent);
             gltf = new JSONObject(gltfContent);
 
         //construct buffers
