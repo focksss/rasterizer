@@ -26,8 +26,8 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 
 ## Current Features
 - Custom .obj and .mtl parser
-  - Light sources auto generate at emissive areas
 - Custom gLTF parser
+- Light sources auto generate at emissive areas
 - Custom vector class (rather than JOML Vec3f)
 - Simple + debug controls
 - Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
