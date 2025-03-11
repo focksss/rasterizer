@@ -45,7 +45,7 @@ public class Run {
     public static long window, FPS = 240;
 
     public static float EXPOSURE = 1f;
-    public static float GAMMA = 1;
+    public static float GAMMA = 1; // 0.25
     public static boolean doSSAO = true;
     public static float SSAOradius = 0.6f;
     public static float SSAObias = 0.001f;
@@ -85,7 +85,8 @@ public class Run {
         //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
     }
     public static void runEngine() {
-        controller = new Controller(new Vec(11.05, 2.71, 2.47), new Vec(0.06, -1.6, 0), window);
+        controller = new Controller(new Vec(0), new Vec(0), window);
+        //controller = new Controller(new Vec(11.05, 2.71, 2.47), new Vec(0.06, -1.6, 0), window);
         world = new World();
         createWorld();
         world.updateWorld();
@@ -300,6 +301,7 @@ public class Run {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_SAMPLES, 4);
         window = glfwCreateWindow(WIDTH, HEIGHT, "rasterizer", NULL, NULL);
         glfwMakeContextCurrent(window);
         GL.createCapabilities();
@@ -320,7 +322,6 @@ public class Run {
         //glEnable(GL_BLEND);
         glEnable(GL_MULTISAMPLE);
         glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
-        glfwWindowHint(GLFW_SAMPLES, 4);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glEnable(GL_STENCIL_TEST);
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);

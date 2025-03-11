@@ -317,21 +317,16 @@ vec3 getSkyboxCol(float fov, float aspectRatio) {
     // Convert texture coordinates from [0,1] range to [-1,1] range
     vec2 screenPos = texCoord * 2.0 - 1.0;
 
-    // The key adjustment: we need to consider the aspect ratio for proper circular rotation
-    // For a landscape display (like 16:9), we need to scale the y coordinate, not the x
-    // This maintains a circular field of view during rotation
-    //screenPos.y /= aspectRatio;
-    screenPos.x *= 1.9*aspectRatio;
-    // Calculate direction vector based on FOV
-    float scale = tan(radians(fov) * 0.5);
-    vec3 dir = vec3(screenPos.x * scale, screenPos.y * scale, -1.0);
+    screenPos.x *= 1.89*aspectRatio;
 
-    // Normalize before rotation to ensure unit vector
+    float scale = tan(radians(fov) * 0.5);
+    vec3 dir = vec3(screenPos.x * scale, screenPos.y * scale, 1.0);
+
     dir = normalize(dir);
 
 
     // Apply camera rotation
-    dir = rotate(dir, camRot*vec3(-1, 1, 1));
+    dir = rotate(dir, camRot*vec3(1, -1, 1));
 
     // Convert to equirectangular UV mapping
     float u = atan(dir.z, dir.x) / (2.0 * PI) + 0.5;
@@ -344,7 +339,7 @@ vec3 getSkyboxCol(float fov, float aspectRatio) {
 void main() {
     vec4 initSample = texture(gPosition, texCoord).rgba;
     if (isinf(initSample.r)) {
-        fragColor = vec4(getSkyboxCol(100, 16/9)*0.5,1);
+        fragColor = vec4(getSkyboxCol(100, width/height)*0.5,1);
     } else {
         vec3 thisPosition = initSample.rgb;
         vec3 thisNormal = (texture(gNormal, texCoord).rgb - 0.5) * 2;

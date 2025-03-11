@@ -6,6 +6,12 @@ uniform sampler2D environmentMap;
 
 const float PI = 3.14159265359;
 
+vec3 getSkyboxCol(vec3 dir) {
+    float u = atan(dir.z, dir.x) / (2.0 * PI) + 0.5;
+    float v = asin(dir.y) / PI + 0.5;
+    return texture(environmentMap, vec2(u, 1-v)).rgb;
+}
+
 void main()
 {
     vec3 N = normalize(WorldPos);

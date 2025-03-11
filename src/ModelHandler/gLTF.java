@@ -78,8 +78,10 @@ public class gLTF {
                 JSONObject bufferView = bufferViews.getJSONObject(i);
                 Buffer buffer = Buffers.get(bufferView.getInt("buffer"));
                 int byteLength = bufferView.getInt("byteLength");
-                int byteOffset = bufferView.getInt("byteOffset");
-                int target = bufferView.getInt("target");
+                int byteOffset = 0;
+                if (bufferView.has("byteOffset")) byteOffset = bufferView.getInt("byteOffset");
+                int target = 0;
+                if (bufferView.has("target")) target = bufferView.getInt("target");
                 BufferViews.add(new BufferView(buffer, byteLength, byteOffset, target));
             }
         //construct accessors
@@ -93,11 +95,11 @@ public class gLTF {
                 Accessor newAccessor = new Accessor(bufferView, componentType, count, type);
                 if (accessor.has("min")) {
                     JSONArray min = accessor.getJSONArray("min");
-                    newAccessor.setMin(new Vec(min.getNumber(0).floatValue(), min.getNumber(1).floatValue(), min.getNumber(2).floatValue()));
+                    if (min.length() > 2) newAccessor.setMin(new Vec(min.getNumber(0).floatValue(), min.getNumber(1).floatValue(), min.getNumber(2).floatValue()));
                 }
                 if (accessor.has("max")) {
                     JSONArray max = accessor.getJSONArray("max");
-                    newAccessor.setMax(new Vec(max.getNumber(0).floatValue(), max.getNumber(1).floatValue(), max.getNumber(2).floatValue()));
+                    if (max.length() > 2) newAccessor.setMax(new Vec(max.getNumber(0).floatValue(), max.getNumber(1).floatValue(), max.getNumber(2).floatValue()));
                 }
                 Accessors.add(newAccessor);
             }
@@ -144,18 +146,20 @@ public class gLTF {
                     JSONArray translation = node.getJSONArray("translation");
                     transform.translate(translation.getNumber(0).floatValue(), translation.getNumber(1).floatValue(), translation.getNumber(2).floatValue());
                 }
-                if (node.has("mesh")) {
-                    Mesh mesh = Meshes.get(node.getInt("mesh"));
-                    Nodes.add(new Node(name, mesh, transform));
-                }
+                Mesh mesh = null;
+                if (node.has("mesh")) mesh = Meshes.get(node.getInt("mesh"));
+                List<Integer> childrenNodes = new ArrayList<>();
                 if (node.has("children")) {
-                    JSONArray children = node.getJSONArray("children");
-                    List<Node> childrenNodes = new ArrayList<>();
+                    JSONArray children = node.getJSONArray("children");;
+                    childrenNodes = new ArrayList<>();
                     for (int j = 0; j < children.length(); j++) {
-                        childrenNodes.add(Nodes.get(children.getInt(j)));
+                        childrenNodes.add(children.getInt(j));
                     }
-                    Nodes.add(new Node(name, childrenNodes, transform));
                 }
+                Nodes.add(new Node(name, childrenNodes, mesh, transform));
+            }
+            for (Node node : Nodes) {
+                node.addChildren();
             }
         //construct scenes
             JSONArray scenes = gltf.getJSONArray("scenes");
@@ -379,16 +383,28 @@ public class gLTF {
         public Mesh mesh = null;
         public Matrix4f transform = new Matrix4f().identity();
         public List<Node> children = new ArrayList<>();
+        public List<Integer> childrenIndices = new ArrayList<>();
 
         public Node(String name, Mesh mesh, Matrix4f transform) {
             this.name = name;
             this.mesh = mesh;
             this.transform = transform;
         }
-        public Node(String name, List<Node> children, Matrix4f transform) {
+        public Node(String name, List<Integer> children, Matrix4f transform) {
             this.name = name;
-            this.children = children;
+            this.childrenIndices = children;
             this.transform = transform;
+        }
+        public Node(String name, List<Integer> children, Mesh mesh, Matrix4f transform) {
+            this.name = name;
+            this.childrenIndices = children;
+            this.mesh = mesh;
+            this.transform = transform;
+        }
+        public void addChildren() {
+            for (Integer i : childrenIndices) {
+                children.add(Nodes.get(i));
+            }
         }
     }
     public static class Mesh {
