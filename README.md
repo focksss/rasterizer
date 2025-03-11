@@ -18,7 +18,8 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 
 
 ## Latest Screenshot
-<img src="https://github.com/user-attachments/assets/968693a9-045b-474f-9444-acf9f77fd253" width="1080">
+<img src="https://github.com/user-attachments/assets/8aaf6ef9-8862-4912-b2a5-55502b4f8860" width="1080">
+
 
 
 
