@@ -7,6 +7,7 @@ import ModelHandler.Light;
 import org.joml.Vector4f;
 import org.lwjgl.opengl.GL;
 
+import java.io.*;
 import java.awt.*;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -42,8 +43,11 @@ public class Run {
     private static Vec[] SSAOkernal;
     public static Shader
             geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader;
+    public static String savePath = "C:\\Graphics\\rasterizer\\save.txt";
+    
     public static long window, FPS = 240;
-
+    public static Vec camPos = new Vec(0);
+    public static Vec camRot = new Vec(0);
     public static float EXPOSURE = 1f;
     public static float GAMMA = 1; // 0.25
     public static boolean doSSAO = true;
@@ -78,14 +82,15 @@ public class Run {
 
 
     public static void main(String[] args) {
+        loadSave();
         init();
         runEngine();
-
+        updateSave();
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
         //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
     }
     public static void runEngine() {
-        controller = new Controller(new Vec(0), new Vec(0), window);
+        controller = new Controller(camPos, camRot, window);
         //controller = new Controller(new Vec(11.05, 2.71, 2.47), new Vec(0.06, -1.6, 0), window);
         world = new World();
         createWorld();
@@ -688,6 +693,67 @@ public class Run {
             }
         }
         glCullFace(GL_BACK);
+    }
+
+    public static void updateSave() {
+        File newSave = new File("C:\\Graphics\\rasterizer", "save.txt");
+        BufferedWriter writer = new BufferedWriter(new FileWriter(newSave));
+        writer.write("Position: " + controller.position.toString());
+        writer.newLine();
+        writer.write("Rotation: " + controller.rotation.toString());
+        writer.newLine();
+        writer.write("Max_FPS: " + FPS);
+        writer.newLine();
+        writer.write("FOV: " + FOV);
+        writer.newLine();
+        writer.write("Exposure: " + exposure);
+        writer.newLine();
+        writer.write("Gamma: " + gamma);
+        writer.newLine();
+        writer.write("Do_SSAO: " + doSSAO);
+        writer.newLine();
+        writer.write("SSAO_Radius: " + SSAOradius);
+        writer.newLine();
+        writer.write("SSAO_Bias: " + SSAObias);
+        writer.newLine();
+        writer.write("Bloom_radius: " + bloomRadius);
+        writer.newLine();
+        writer.write("Bloom_intensity: " + bloomIntensity);
+        writer.newLine();
+        writer.write("Bloom_threshold: " + bloomThreshold);
+        writer.newLine();
+    }
+
+    public static void loadSave() {
+        File saveFile = new File("C:\\Graphics\\rasterizer\\save.txt");
+        if (!saveFile.exists()) {
+            saveFile = new File("C:\\Graphics\\rasterizer", "save.txt");
+            System.err.println("Save file not found, a new one has been created");
+            return;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader())) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] l = line.split(" ");
+                switch (l[0]) {
+                    case ("Position:") camPos = new Vec(l[1], l[2], l[3]);
+                    case ("Rotation:") camRot = new Vec(l[1], l[2], l[3]);
+                    case ("Max_FPS:") FPS = Integer.parseInt(l[1]);
+                    case ("FOV:") FOV = Float.parseFloat(l[1]);
+                    case ("Exposure:") exposure = Float.parseFloat(l[1]);
+                    case ("Gamma:") gamma = Float.parseFloat(l[1]);
+                    case ("Do_SSAO:") doSSAO = Boolean.parseBoolean(l[1]);
+                    case ("SSAO_Radius:") SSAOradius = Float.parseFloat(l[1]);
+                    case ("SSAO_Bias:") SSAObias = Float.parseFloat(l[1]);
+                    case ("Bloom_radius:") bloomRadius = Float.parseFloat(l[1]);
+                    case ("Bloom_intensity:") bloomIntensity = Float.parseFloat(l[1]);
+                    case ("Bloom_threshold:") bloomThreshold = Float.parseFloat(l[1]);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static double lerp(double t, double a, double b) {
