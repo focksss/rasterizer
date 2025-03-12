@@ -82,6 +82,7 @@ public class Run {
 
 
     public static void main(String[] args) {
+        loadSave();
         init();
         runEngine();
         updateSave();
