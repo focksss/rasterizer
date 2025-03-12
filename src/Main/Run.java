@@ -7,6 +7,7 @@ import ModelHandler.Light;
 import org.joml.Vector4f;
 import org.lwjgl.opengl.GL;
 
+import java.io.*;
 import java.awt.*;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -82,7 +83,7 @@ public class Run {
     public static void main(String[] args) {
         init();
         runEngine();
-
+        updateSave();
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
         //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
     }
@@ -690,6 +691,37 @@ public class Run {
             }
         }
         glCullFace(GL_BACK);
+    }
+
+    public static void updateSave() {
+        File newSave = new File("C:\\Graphics\\rasterizer", "save.txt");
+        BufferedWriter writer = new BufferedWriter(new FileWriter(newSave));
+        writer.write("Position: " + controller.position.toString());
+        writer.newLine();
+        writer.write("Rotation: " + controller.rotation.toString());
+        writer.newLine();
+        writer.write("Position: " + controller.position.toString());
+        writer.newLine();
+        writer.write("Max FPS: " + FPS);
+        writer.newLine();
+        writer.write("FOV: " + FOV);
+        writer.newLine();
+        writer.write("Exposure: " + exposure);
+        writer.newLine();
+        writer.write("Gamma: " + gamma);
+        writer.newLine();
+        writer.write("doSSAO: " + doSSAO);
+        writer.newLine();
+        writer.write("SSAO Radius: " + SSAOradius);
+        writer.newLine();
+        writer.write("SSAO Bias: " + SSAObias);
+        writer.newLine();
+        writer.write("Bloom radius: " + bloomRadius);
+        writer.newLine();
+        writer.write("Bloom intensity: " + bloomIntensity);
+        writer.newLine();
+        writer.write("Bloom threshold: " + bloomThreshold);
+        writer.newLine();
     }
 
     public static double lerp(double t, double a, double b) {
