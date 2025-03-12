@@ -32,6 +32,11 @@ public class Vec {
         this.y = y;
         this.z = z;
     }
+    public Vec(String x, String y, String z) {
+        this.x = Double.parseDouble(x);
+        this.y = Double.parseDouble(y);
+        this.z = Double.parseDouble(z);
+    }
     public Vec(double x, double y) {
         this.x = x;
         this.y = y;
@@ -77,7 +82,10 @@ public class Vec {
         updateFloats();
         return new Vector3f(xF, yF, zF);
     }
-
+    public String toString() {
+        return "x + " " + y + " " + z";
+    }
+    
     public void set(int c, double val) {
         switch(c) {
             case 0: x = val; break;
