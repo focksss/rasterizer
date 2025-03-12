@@ -42,6 +42,8 @@ public class Run {
     private static Vec[] SSAOkernal;
     public static Shader
             geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader;
+    public static String savePath = "C:\\Graphics\\rasterizer\\save.txt";
+    
     public static long window, FPS = 240;
 
     public static float EXPOSURE = 1f;
