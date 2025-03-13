@@ -63,11 +63,6 @@ public class Vec {
         this.y = v;
         this.z = v;
     }
-    public Vec(String x, String y, String z) {
-        this.x = Double.parseDouble(x);
-        this.y = Double.parseDouble(y);
-        this.z = Double.parseDouble(z);
-    }
     public Vec(String u, String v) {
         this.x = Double.parseDouble(u);
         this.y = Double.parseDouble(v);
@@ -83,7 +78,7 @@ public class Vec {
         return new Vector3f(xF, yF, zF);
     }
     public String toString() {
-        return "x + " " + y + " " + z";
+        return new String(x + " " + y + " " + z);
     }
     
     public void set(int c, double val) {
