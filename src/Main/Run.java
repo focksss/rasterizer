@@ -43,14 +43,13 @@ public class Run {
     private static Vec[] SSAOkernal;
     public static Shader
             geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader;
-    public static String savePath = "C:\\Graphics\\rasterizer\\save.txt";
-    
+
     public static long window, FPS = 240;
     public static Vec camPos, camRot;
     public static float
             EXPOSURE, GAMMA, SSAOradius, SSAObias, bloomRadius, bloomIntensity, bloomThreshold,
             FOV;
-    public static boolean doSSAO = true;
+    public static boolean doSSAO = true; static boolean CAP_FPS = true;
 
     public static long startTime = System.nanoTime();
     public static long time = 0;
@@ -62,7 +61,7 @@ public class Run {
     public static float nearPlane = 0.001f, farPlane = 10000.0f;
     public static Matrix4f projectionMatrix;
     public static Matrix4f viewMatrix;
-    public static String skyboxPath = "C:\\Graphics\\assets\\the_sky_is_on_fire_4k.hdr";
+    public static String skyboxPath = "C:\\Graphics\\assets\\kloofendal_48d_partly_cloudy_puresky.hdr";
     private static final String shaderPath = "C:\\Graphics\\rasterizer\\src\\shaders\\";
 
     public static World world;
@@ -89,7 +88,7 @@ public class Run {
         world = new World();
         createWorld();
         world.updateWorld();
-        initSkybox(skyboxPath);
+        skyboxTex = World.loadTexture(skyboxPath);
 
         long frameTime = 1000000000 / FPS; // Nanoseconds per frame
         System.out.println();
@@ -115,7 +114,7 @@ public class Run {
             }
             long elapsedTime = System.nanoTime() - startTime;
             long sleepTime = frameTime - elapsedTime;
-            if (sleepTime > 0) {
+            if (sleepTime > 0 && CAP_FPS) {
                 try {
                     Thread.sleep(sleepTime / 1000000, (int) (sleepTime % 1000000)); // Convert to milliseconds & nanoseconds
                 } catch (InterruptedException e) {
@@ -127,8 +126,8 @@ public class Run {
     }
 
     public static void createWorld() {
-        world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2");
+        //world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\sponzaGLTF");
         world.addGLTF(newObject);
 
         Light newLight = new Light(1);
@@ -281,6 +280,9 @@ public class Run {
         lightingShader.setUniform("width", WIDTH);
         lightingShader.setUniform("height", HEIGHT);
         lightingShader.setUniform("SSAO", doSSAO);
+        lightingShader.setUniform("bloom_radius", bloomRadius);
+        lightingShader.setUniform("bloom_threshold", bloomThreshold);
+        lightingShader.setUniform("bloom_intensity", bloomIntensity);
         SSAOshader.setUniform("width", WIDTH);
         SSAOshader.setUniform("height", HEIGHT);
         SSAOshader.setUniform("radius", SSAOradius);
@@ -721,6 +723,8 @@ public class Run {
         writer.newLine();
         writer.write("Bloom_threshold: " + bloomThreshold);
         writer.newLine();
+        writer.write("Cap_FPS: " + CAP_FPS);
+        writer.newLine();
         writer.close();
     }
 
@@ -748,6 +752,7 @@ public class Run {
                     case ("Bloom_radius:"): bloomRadius = Float.parseFloat(l[1]); break;
                     case ("Bloom_intensity:"): bloomIntensity = Float.parseFloat(l[1]); break;
                     case ("Bloom_threshold:"): bloomThreshold = Float.parseFloat(l[1]); break;
+                    case ("Cap_FPS:"): CAP_FPS = Boolean.parseBoolean(l[1]); break;
                 }
             }
         } catch (IOException e) {

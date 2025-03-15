@@ -84,55 +84,7 @@ public class World {
         for (String path : texturePaths) {
             counter++;
             System.out.print("\rloading texture (" + counter + "/" + texturePaths.size() + ") from " + path + "...");
-            int textureID = 0;
-
-            if (path.endsWith(".dds")) {
-                DDSFile ddsFile;
-                try {
-                    ddsFile = new DDSFile(path);
-                    textureID = glGenTextures();
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, textureID);
-                    for (int level = 0; level < ddsFile.getMipMapCount(); level++)
-                        glCompressedTexImage2D(
-                                GL_TEXTURE_2D,
-                                level,
-                                ddsFile.getFormat(),
-                                ddsFile.getWidth(level),
-                                ddsFile.getHeight(level),
-                                0,
-                                ddsFile.getBuffer(level)
-                        );
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, ddsFile.getMipMapCount() - 1);
-                } catch (FileNotFoundException e) {
-                    throw new RuntimeException(e);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            } else {
-                textureID = glGenTextures();
-                glBindTexture(GL_TEXTURE_2D, textureID);
-                IntBuffer width = MemoryUtil.memAllocInt(1);
-                IntBuffer height = MemoryUtil.memAllocInt(1);
-                IntBuffer channels = MemoryUtil.memAllocInt(1);
-                ByteBuffer image = stbi_load(path, width, height, channels, 4);
-                if (image == null) {
-                    System.err.println("could not load image " + path);
-                    continue;
-                }
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width.get(0), height.get(0), 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-                glGenerateMipmap(GL_TEXTURE_2D);
-                glTextureParameteri(textureID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-                stbi_image_free(image);
-                MemoryUtil.memFree(width);
-                MemoryUtil.memFree(height);
-                MemoryUtil.memFree(channels);
-            }
+            int textureID = loadTexture(path);
 
             long handle = glGetTextureHandleARB(textureID);
             glMakeTextureHandleResidentARB(handle);
@@ -200,6 +152,58 @@ public class World {
         glBufferData(GL_SHADER_STORAGE_BUFFER, lightSpaceMatrixBuffer, GL_STATIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, lightSpaceMatrixSSBO);
         memFree(lightSpaceMatrixBuffer);
+    }
+
+    public static int loadTexture(String path) {
+        int textureID = 0;
+        if (path.endsWith(".dds")) {
+            DDSFile ddsFile;
+            try {
+                ddsFile = new DDSFile(path);
+                textureID = glGenTextures();
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, textureID);
+                for (int level = 0; level < ddsFile.getMipMapCount(); level++)
+                    glCompressedTexImage2D(
+                            GL_TEXTURE_2D,
+                            level,
+                            ddsFile.getFormat(),
+                            ddsFile.getWidth(level),
+                            ddsFile.getHeight(level),
+                            0,
+                            ddsFile.getBuffer(level)
+                    );
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, ddsFile.getMipMapCount() - 1);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            textureID = glGenTextures();
+            glBindTexture(GL_TEXTURE_2D, textureID);
+            IntBuffer width = MemoryUtil.memAllocInt(1);
+            IntBuffer height = MemoryUtil.memAllocInt(1);
+            IntBuffer channels = MemoryUtil.memAllocInt(1);
+            ByteBuffer image;
+            image = stbi_load(path, width, height, channels, 4);
+            if (image == null) {
+                System.err.println("could not load image " + path);
+                image = stbi_load("C:\\Graphics\\assets\\null.png", width, height, channels, 4);
+                assert image != null;
+            }
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width.get(0), height.get(0), 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            glTextureParameteri(textureID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+            stbi_image_free(image);
+            MemoryUtil.memFree(width);
+            MemoryUtil.memFree(height);
+            MemoryUtil.memFree(channels);
+        }
+        return textureID;
     }
 
     public void addObject(String filePath, Vec scale, Vec translation, Vec rotation, String identifier) {
@@ -334,8 +338,8 @@ public class World {
                     }
                 }
                 if (willAdd) {
-                    double E = thisMtl.emissiveStrength;
-                    double[] atten = computeAttenuation(E * 0.5);
+                    double E = thisMtl.emissiveStrength*0.1;
+                    double[] atten = computeAttenuation(E);
                     Light newLight1 = new Light(0);
                     newLight1.setProperty("position", pos);
                     newLight1.setProperty("constantAttenuation", 1);
