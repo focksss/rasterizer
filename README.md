@@ -46,6 +46,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
   - Animated HDRI
 - Finish implementing support for multiple shadow maps
 - Skeletal animation
+- SSGI
 
 ## Usage
 Include lwjgl, lwjgl-opengl, lwjgl-stb, lwjgl-glfw, dds-lwjgl-3.0.0, joml, json
