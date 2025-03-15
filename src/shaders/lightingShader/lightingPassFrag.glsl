@@ -23,6 +23,9 @@ uniform sampler2D skybox;
 uniform int width;
 uniform int height;
 
+uniform float bloom_radius;
+uniform float bloom_threshold;
+uniform float bloom_intensity;
 
 //raw mtl data
 layout(std430, binding = 0) buffer mtlBuffer {
@@ -394,8 +397,8 @@ void main() {
         fragColor = vec4(Lo,1);
     }
     float brightness = dot(fragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-    if (brightness > 1) {
-        bloomColor = fragColor*10;
+    if (brightness > bloom_threshold) {
+        bloomColor = fragColor*bloom_intensity;
     } else {
         bloomColor = vec4(0);
     }

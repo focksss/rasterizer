@@ -28,7 +28,7 @@ public class Controller {
 
     boolean mouseMode = true;
     boolean firstMouse = true;
-    boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f1WasDown = false; boolean f2WasDown = false; boolean f3WasDown;
+    boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f1WasDown = false; boolean f2WasDown = false; boolean f3WasDown = false; boolean f4WasDown = false;
     double lastMouseX = 0;
     double lastMouseY = 0;
 
@@ -127,6 +127,12 @@ public class Controller {
                 Run.doSSAO = !Run.doSSAO;
             }
         } else {f3WasDown = false;}
+        if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS) {
+            if (!f4WasDown) {
+                f4WasDown = true;
+                Run.loadSave();
+            }
+        } else {f4WasDown = false;}
     }
 
     private void doMouse() {
