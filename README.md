@@ -34,6 +34,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
 - Simple PBR shading (currently no IBL)
 - Orthographic shadow mapping
+- Fullscreen option and ability to rescale window (hot recreating textures and framebuffers)
 - Post processing features including:
   - HDR
   - Bloom
@@ -56,6 +57,7 @@ Replace paths to skybox and objects with paths to objects on your computer
 - F1 to recompile shaders
 - F2 to screenshot
 - F3 to toggle SSAO
+- F11 to toggle fullscreen
 - "+" and "-" to change movespeed (+ does not require shift held)
 - "[" and "]" to alter exposure
 - ";" and "'" to alter gamma
