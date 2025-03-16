@@ -52,7 +52,7 @@ public class Run {
     public static float
             EXPOSURE, GAMMA, SSAOradius, SSAObias, bloomRadius, bloomIntensity, bloomThreshold,
             FOV;
-    public static boolean doSSAO = true; static boolean CAP_FPS = true;
+    public static boolean doSSAO = true; static boolean CAP_FPS = true; static boolean borderless_fullscreen = true;
 
     public static long startTime = System.nanoTime();
     public static long time = 0;
@@ -131,7 +131,7 @@ public class Run {
 
     public static void createWorld() {
         //world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\sponzaGLTF");
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2");
         world.addGLTF(newObject);
 
         Light newLight = new Light(1);
@@ -375,23 +375,36 @@ public class Run {
         GLFWVidMode vidMode = glfwGetVideoMode(monitor);
 
         if (isFullscreen) {
-            //store current window position and size before going fullscreen
+            // Store window position and size
             glfwGetWindowPos(window, windowX, windowY);
             int[] width = new int[1], height = new int[1];
             glfwGetWindowSize(window, width, height);
             windowedWidth = width[0];
             windowedHeight = height[0];
-            WIDTH = 0; HEIGHT = 0;
 
-            glfwSetWindowMonitor(window, monitor, 0, 0, vidMode.width(), vidMode.height(), (int) FPS);
-            glfwSwapBuffers(window);
-            glfwPollEvents();
+            if (borderless_fullscreen) {
+                glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+                glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_FALSE);
+            }
+
+            WIDTH = vidMode.width();
+            HEIGHT = vidMode.height();
+            glfwSetWindowSize(window, WIDTH, HEIGHT);
+            glfwSetWindowPos(window, 0, 0);
+
         } else {
-            WIDTH = windowedWidth; HEIGHT = windowedHeight;
-            glfwSetWindowMonitor(window, 0, windowX[0], windowY[0], windowedWidth, windowedHeight, (int) FPS);
-            glfwSwapBuffers(window);
-            glfwPollEvents();
+            if (borderless_fullscreen) {
+                glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
+                glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_TRUE);
+            }
+
+            WIDTH = windowedWidth;
+            HEIGHT = windowedHeight;
+            glfwSetWindowSize(window, WIDTH, HEIGHT);
+            glfwSetWindowPos(window, windowX[0], windowY[0]);
         }
+        glfwSwapBuffers(window);
+        glfwPollEvents();
         doRescale = true;
     }
     public static void scaleToWindow() {
@@ -761,38 +774,68 @@ public class Run {
         writer.newLine();
         writer.write("Cap_FPS: " + CAP_FPS);
         writer.newLine();
+        writer.write("Borderless_fullscreen: " + borderless_fullscreen);
+        writer.newLine();
         writer.close();
     }
 
     public static void loadSave() {
         File saveFile = new File("save.txt");
         if (!saveFile.exists()) {
-            System.err.println("Save file not found, a new one has been created");
-            return;
-        }
-
-        try (BufferedReader reader = new BufferedReader(new FileReader("save.txt"))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] l = line.split(" ");
-                switch (l[0]) {
-                    case ("Position:"): camPos = new Vec(l[1], l[2], l[3]); break;
-                    case ("Rotation:"): camRot = new Vec(l[1], l[2], l[3]); break;
-                    case ("Max_FPS:"): FPS = Integer.parseInt(l[1]); break;
-                    case ("FOV:"): FOV = Float.parseFloat(l[1]); break;
-                    case ("Exposure:"): EXPOSURE = Float.parseFloat(l[1]); break;
-                    case ("Gamma:"): GAMMA = Float.parseFloat(l[1]); break;
-                    case ("Do_SSAO:"): doSSAO = Boolean.parseBoolean(l[1]); break;
-                    case ("SSAO_Radius:"): SSAOradius = Float.parseFloat(l[1]); break;
-                    case ("SSAO_Bias:"): SSAObias = Float.parseFloat(l[1]); break;
-                    case ("Bloom_radius:"): bloomRadius = Float.parseFloat(l[1]); break;
-                    case ("Bloom_intensity:"): bloomIntensity = Float.parseFloat(l[1]); break;
-                    case ("Bloom_threshold:"): bloomThreshold = Float.parseFloat(l[1]); break;
-                    case ("Cap_FPS:"): CAP_FPS = Boolean.parseBoolean(l[1]); break;
+            System.err.println("Save file not found, a new one will be created");
+        } else {
+            try (BufferedReader reader = new BufferedReader(new FileReader("save.txt"))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] l = line.split(" ");
+                    switch (l[0]) {
+                        case ("Position:"):
+                            camPos = new Vec(l[1], l[2], l[3]);
+                            break;
+                        case ("Rotation:"):
+                            camRot = new Vec(l[1], l[2], l[3]);
+                            break;
+                        case ("Max_FPS:"):
+                            FPS = Integer.parseInt(l[1]);
+                            break;
+                        case ("FOV:"):
+                            FOV = Float.parseFloat(l[1]);
+                            break;
+                        case ("Exposure:"):
+                            EXPOSURE = Float.parseFloat(l[1]);
+                            break;
+                        case ("Gamma:"):
+                            GAMMA = Float.parseFloat(l[1]);
+                            break;
+                        case ("Do_SSAO:"):
+                            doSSAO = Boolean.parseBoolean(l[1]);
+                            break;
+                        case ("SSAO_Radius:"):
+                            SSAOradius = Float.parseFloat(l[1]);
+                            break;
+                        case ("SSAO_Bias:"):
+                            SSAObias = Float.parseFloat(l[1]);
+                            break;
+                        case ("Bloom_radius:"):
+                            bloomRadius = Float.parseFloat(l[1]);
+                            break;
+                        case ("Bloom_intensity:"):
+                            bloomIntensity = Float.parseFloat(l[1]);
+                            break;
+                        case ("Bloom_threshold:"):
+                            bloomThreshold = Float.parseFloat(l[1]);
+                            break;
+                        case ("Cap_FPS:"):
+                            CAP_FPS = Boolean.parseBoolean(l[1]);
+                            break;
+                        case ("Borderless_fullscreen:"):
+                            borderless_fullscreen = Boolean.parseBoolean(l[1]);
+                            break;
+                    }
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 

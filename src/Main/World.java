@@ -188,7 +188,7 @@ public class World {
             image = stbi_load(path, width, height, channels, 4);
             if (image == null) {
                 System.err.println("could not load image " + path);
-                image = stbi_load("C:\\Graphics\\assets\\null.png", width, height, channels, 4);
+                image = stbi_load("local resources\\null.png", width, height, channels, 4);
                 assert image != null;
             }
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width.get(0), height.get(0), 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
@@ -338,7 +338,7 @@ public class World {
                     }
                 }
                 if (willAdd) {
-                    double E = thisMtl.emissiveStrength*0.1;
+                    double E = thisMtl.emissiveStrength;
                     double[] atten = computeAttenuation(E);
                     Light newLight1 = new Light(0);
                     newLight1.setProperty("position", pos);
@@ -346,7 +346,7 @@ public class World {
                     newLight1.setProperty("linearAttenuation", 0.5);
                     newLight1.setProperty("quadraticAttenuation", 0.3/((E*E)/100));
                     newLight1.setProperty("ambient", new Vec(0.1, 0.1, 0.1));
-                    newLight1.setProperty("diffuse", new Vec(thisMtl.Ke).mult(E));
+                    newLight1.setProperty("diffuse", new Vec(thisMtl.Ke).mult(E*0.1));
                     newLight1.setProperty("specular", new Vec(1, 1, 1));
 
                     newLights.add(newLight1);
