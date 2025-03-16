@@ -5,6 +5,7 @@ import ModelHandler.gLTF;
 import Datatypes.Vec;
 import ModelHandler.Light;
 import org.joml.Vector4f;
+import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 
 import java.io.*;
@@ -42,9 +43,11 @@ public class Run {
     private static int[] gaussianBlurFBO;
     private static Vec[] SSAOkernal;
     public static Shader
-            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader;
+            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader, upsampleShader, downsampleShader;
 
     public static long window, FPS = 240;
+    static boolean isFullscreen = false; static int[] windowX = new int[1]; static int[] windowY = new int[1]; static int windowedWidth = 1920; static int windowedHeight = 1080;
+    static GLFWVidMode vidMode;
     public static Vec camPos, camRot;
     public static float
             EXPOSURE, GAMMA, SSAOradius, SSAObias, bloomRadius, bloomIntensity, bloomThreshold,
@@ -72,6 +75,7 @@ public class Run {
     private static JTextArea textArea;
 
     static List<Plane> frustumPlanes;
+    static boolean doRescale = false;
 
 
     public static void main(String[] args) throws IOException {
@@ -91,18 +95,18 @@ public class Run {
         skyboxTex = World.loadTexture(skyboxPath);
 
         long frameTime = 1000000000 / FPS; // Nanoseconds per frame
-        System.out.println();
+        System.out.println("Initiation complete");
         int frames = 0;
         long lastTime = System.nanoTime();
 
-        //feeble attempt to fix SSAO simply not happening sometimes...
-        renderToQuad(SSAOblurTex);
 
         while (!glfwWindowShouldClose(window)) {
             long startTime = System.nanoTime();
 
-            update();
+            checkWindowSize();
             controller.doControls(time);
+            if (doRescale) {scaleToWindow(); doRescale = false;}
+            update();
             updateWorldObjectInstances();
             render();
             frames++;
@@ -247,18 +251,6 @@ public class Run {
     public static void update() {
         time = (System.nanoTime() - startTime);
 
-        IntBuffer width = MemoryUtil.memAllocInt(1);
-        IntBuffer height = MemoryUtil.memAllocInt(1);
-        glfwGetWindowSize(window, width, height);
-        if (width.get(0) != WIDTH || height.get(0) != HEIGHT) {
-            WIDTH = width.get(0);
-            HEIGHT = height.get(0);
-            aspectRatio = (float) WIDTH / HEIGHT;
-            scaleToWindow();
-        }
-        MemoryUtil.memFree(width);
-        MemoryUtil.memFree(height);
-
         viewMatrix = new Matrix4f();
         viewMatrix.identity()
                 .rotateX(controller.cameraRot.xF).rotateY(-controller.cameraRot.yF).rotateZ(-controller.cameraRot.zF)
@@ -303,7 +295,9 @@ public class Run {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_SAMPLES, 4);
-        window = glfwCreateWindow(WIDTH, HEIGHT, "rasterizer", NULL, NULL);
+        long primaryMonitor = glfwGetPrimaryMonitor();
+        vidMode = glfwGetVideoMode(primaryMonitor);
+        window = glfwCreateWindow(WIDTH, HEIGHT, "rasterizer", 0, NULL);
         glfwMakeContextCurrent(window);
         GL.createCapabilities();
 
@@ -357,6 +351,48 @@ public class Run {
         SSAOshader = new Shader(shaderPath + "\\SSAOshader\\SSAOfrag.glsl", shaderPath + "\\quadVertex.glsl");
         gaussianBlurShader = new Shader(shaderPath + "\\gaussianBlurShader\\gaussianBlurFrag.glsl", shaderPath + "\\quadVertex.glsl");
         debugShader = new Shader(shaderPath + "\\debugShader\\debugShader.frag", shaderPath + "\\debugShader\\debugShader.frag");
+    }
+    static void checkWindowSize() {
+        IntBuffer width = MemoryUtil.memAllocInt(1);
+        IntBuffer height = MemoryUtil.memAllocInt(1);
+        glfwGetWindowSize(window, width, height);
+        glBindTexture(GL_TEXTURE_2D, postProcessingTex);
+        int widthTex = glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH);
+        int heightTex = glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT);
+//        System.out.println(width.get(0) + " " + height.get(0) + ", " + widthTex + " " + heightTex);
+        if (width.get(0) != widthTex || height.get(0) != heightTex) {
+            WIDTH = width.get(0);
+            HEIGHT = height.get(0);
+            aspectRatio = (float) WIDTH / HEIGHT;
+            doRescale = true;
+        }
+        MemoryUtil.memFree(width);
+        MemoryUtil.memFree(height);
+    }
+    public static void toggleFullscreen() {
+        isFullscreen = !isFullscreen;
+        long monitor = glfwGetPrimaryMonitor();
+        GLFWVidMode vidMode = glfwGetVideoMode(monitor);
+
+        if (isFullscreen) {
+            //store current window position and size before going fullscreen
+            glfwGetWindowPos(window, windowX, windowY);
+            int[] width = new int[1], height = new int[1];
+            glfwGetWindowSize(window, width, height);
+            windowedWidth = width[0];
+            windowedHeight = height[0];
+            WIDTH = 0; HEIGHT = 0;
+
+            glfwSetWindowMonitor(window, monitor, 0, 0, vidMode.width(), vidMode.height(), (int) FPS);
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+        } else {
+            WIDTH = windowedWidth; HEIGHT = windowedHeight;
+            glfwSetWindowMonitor(window, 0, windowX[0], windowY[0], windowedWidth, windowedHeight, (int) FPS);
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+        }
+        doRescale = true;
     }
     public static void scaleToWindow() {
         lightingFBO = glGenFramebuffers();

@@ -28,7 +28,7 @@ public class Controller {
 
     boolean mouseMode = true;
     boolean firstMouse = true;
-    boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f1WasDown = false; boolean f2WasDown = false; boolean f3WasDown = false; boolean f4WasDown = false;
+    boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f1WasDown = false; boolean f2WasDown = false; boolean f3WasDown = false; boolean f4WasDown = false; boolean f11WasDown = false;
     double lastMouseX = 0;
     double lastMouseY = 0;
 
@@ -133,6 +133,12 @@ public class Controller {
                 Run.loadSave();
             }
         } else {f4WasDown = false;}
+        if (glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS) {
+            if (!f11WasDown) {
+                f11WasDown = true;
+                Run.toggleFullscreen();
+            }
+        } else {f11WasDown = false;}
     }
 
     private void doMouse() {
