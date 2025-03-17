@@ -135,10 +135,7 @@ public class Run {
         update();
         updateWorldObjectInstances();
         render();
-        //renderToQuad(GUI.TextRenderer.fontTexture);
         glDisable(GL_CULL_FACE);
-        GUI.textRenderer.renderText("https://github.com/focksss/rasterizer", 0.05f, 0.1f, 1, new Vec(0));
-        GUI.renderQuad(new Vec(0.1,0.1), new Vec(0.2), new Vec(0.3));
 
         GUI.renderGUI();
 
