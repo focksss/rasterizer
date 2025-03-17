@@ -10,7 +10,6 @@ import org.lwjgl.opengl.GL;
 
 import java.io.*;
 import java.awt.*;
-import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -22,6 +21,8 @@ import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
 import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.nuklear.Nuklear.nk_input_begin;
+import static org.lwjgl.nuklear.Nuklear.nk_input_end;
 import static org.lwjgl.opengl.ARBFramebufferSRGB.GL_FRAMEBUFFER_SRGB;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
@@ -64,7 +65,7 @@ public class Run {
     public static float nearPlane = 0.001f, farPlane = 10000.0f;
     public static Matrix4f projectionMatrix;
     public static Matrix4f viewMatrix;
-    public static String skyboxPath = "C:\\Graphics\\assets\\kloofendal_48d_partly_cloudy_puresky.hdr";
+    public static String skyboxPath = "C:\\Graphics\\assets\\symmetrical_garden_4k.hdr";
     private static final String shaderPath = "C:\\Graphics\\rasterizer\\src\\shaders\\";
 
     public static World world;
@@ -77,16 +78,18 @@ public class Run {
     static List<Plane> frustumPlanes;
     static boolean doRescale = false;
 
-
     public static void main(String[] args) throws IOException {
         loadSave();
         init();
+        gui = new GUI();
+        compileShaders();
         runEngine();
         updateSave();
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
         //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
     }
     public static void runEngine() {
+        gui = new GUI();
         controller = new Controller(camPos, camRot, window);
         //controller = new Controller(new Vec(11.05, 2.71, 2.47), new Vec(0.06, -1.6, 0), window);
         world = new World();
@@ -99,16 +102,11 @@ public class Run {
         int frames = 0;
         long lastTime = System.nanoTime();
 
-
         while (!glfwWindowShouldClose(window)) {
             long startTime = System.nanoTime();
 
-            checkWindowSize();
-            controller.doControls(time);
-            if (doRescale) {scaleToWindow(); doRescale = false;}
-            update();
-            updateWorldObjectInstances();
-            render();
+            doFrame();
+
             frames++;
             double thisFrameTime = (startTime - lastTime) / 1_000_000_000.0;
             if (thisFrameTime >= 0.5) {
@@ -127,6 +125,21 @@ public class Run {
             }
         }
         glfwTerminate();
+    }
+    private static void doFrame() {
+        glfwPollEvents();
+
+        checkWindowSize();
+        controller.doControls(time);
+        if (doRescale) {scaleToWindow(); doRescale = false;}
+        update();
+        updateWorldObjectInstances();
+        render();
+        //renderToQuad(GUI.TextRenderer.fontTexture);
+        glDisable(GL_CULL_FACE);
+        GUI.textRenderer.renderText("https://github.com/focksss/rasterizer", -0.48f, -0.45f, 1, new Vec(0));
+
+        glfwSwapBuffers(window);
     }
 
     public static void createWorld() {
@@ -235,9 +248,6 @@ public class Run {
         glDrawArrays(GL_TRIANGLES, 0, 6);
         
         renderToQuad(postProcessingTex);
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 
     public static void updateWorldObjectInstances() {
@@ -308,7 +318,6 @@ public class Run {
         HEIGHT = height.get(0);
         MemoryUtil.memFree(width);
         MemoryUtil.memFree(height);
-        compileShaders();
 
         scaleToWindow();
 
@@ -351,6 +360,7 @@ public class Run {
         SSAOshader = new Shader(shaderPath + "\\SSAOshader\\SSAOfrag.glsl", shaderPath + "\\quadVertex.glsl");
         gaussianBlurShader = new Shader(shaderPath + "\\gaussianBlurShader\\gaussianBlurFrag.glsl", shaderPath + "\\quadVertex.glsl");
         debugShader = new Shader(shaderPath + "\\debugShader\\debugShader.frag", shaderPath + "\\debugShader\\debugShader.frag");
+        GUI.textRenderer.shaderProgram = new Shader("src\\shaders\\text_shader\\text_shader.frag", "src\\shaders\\text_shader\\text_shader.vert");
     }
     static void checkWindowSize() {
         IntBuffer width = MemoryUtil.memAllocInt(1);
@@ -573,27 +583,6 @@ public class Run {
         memFree(noiseBuffer);
     }
 
-    public static void initSkybox(String imagePath) {
-        skyboxTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, skyboxTex);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);  // No mipmaps, just linear filtering
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        IntBuffer width = MemoryUtil.memAllocInt(1);
-        IntBuffer height = MemoryUtil.memAllocInt(1);
-        IntBuffer channels = MemoryUtil.memAllocInt(1);
-        FloatBuffer image = stbi_loadf(imagePath, width, height, channels, 4);
-        if (image == null) {
-            System.err.println("could not load image " + imagePath);
-            return;
-        }
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width.get(0), height.get(0), 0, GL_RGBA, GL_FLOAT, image);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        stbi_image_free(image);
-        MemoryUtil.memFree(width);
-        MemoryUtil.memFree(height);
-        MemoryUtil.memFree(channels);
-    }
-
     private static void renderToQuad(int texture) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -609,12 +598,6 @@ public class Run {
         glBindTexture(GL_TEXTURE_2D, world.shadowmapArray);
         screenShader.setUniform("shadowmapArray", 0);
         */
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-    }
-
-    private static void drawSkybox() {
-        skyboxShader.useProgram();
-        glBindTexture(GL_TEXTURE_2D, skyboxTex);
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
@@ -707,7 +690,7 @@ public class Run {
 //        System.out.println(frustumPlanes.get(3).pointContained(new Vec(0)));
 //        System.out.println(frustumPlanes.get(4).pointContained(new Vec(0)));
 //        System.out.println(frustumPlanes.get(5).pointContained(new Vec(0)));
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 0; i++) {
             boolean inside = false;
             for (Vec point : boxPoints) {
                 if (frustumPlanes.get(i).pointContained(point)) {

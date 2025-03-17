@@ -3,29 +3,33 @@
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/../GraphicsLibraries/dds-lwjgl-3.0.0.jar!/" />
       <root url="jar://$PROJECT_DIR$/../GraphicsLibraries/joml.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../GraphicsLibraries/json-20210307.jar!/" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/imgui" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-glfw" />
+      <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-nuklear" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-opengl" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-stb" />
-      <root url="jar://$PROJECT_DIR$/../GraphicsLibraries/json-20210307.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/imgui" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-glfw" />
+      <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-nuklear" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-opengl" />
       <root url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-stb" />
     </SOURCES>
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/imgui" recursive="false" />
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl" recursive="false" />
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-glfw" recursive="false" />
+    <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-nuklear" recursive="false" />
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-opengl" recursive="false" />
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-stb" recursive="false" />
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/imgui" recursive="false" type="SOURCES" />
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl" recursive="false" type="SOURCES" />
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-glfw" recursive="false" type="SOURCES" />
+    <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-nuklear" recursive="false" type="SOURCES" />
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-opengl" recursive="false" type="SOURCES" />
     <jarDirectory url="file://$PROJECT_DIR$/../GraphicsLibraries/lwjgl-stb" recursive="false" type="SOURCES" />
   </library>
