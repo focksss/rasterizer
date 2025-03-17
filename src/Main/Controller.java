@@ -20,6 +20,8 @@ public class Controller {
     Vec cameraPos;
     Vec cameraRot;
 
+    Vec mousePos;
+    
     float moveSpeed = 1f;
     float sensitivity = 5f;
 
@@ -142,11 +144,14 @@ public class Controller {
     }
 
     private void doMouse() {
+        double[] mouseX = new double[1];
+        double[] mouseY = new double[1];
+        glfwGetCursorPos(window, mouseX, mouseY)
+
+        mousePos = new Vec(mouseX[0], mouseY[0]);
+        
         if (mouseMode) {
-            float sense = sensitivity*0.001f;
-            double[] mouseX = new double[1];
-            double[] mouseY = new double[1];
-            glfwGetCursorPos(window, mouseX, mouseY);
+            float sense = sensitivity*0.001f;;
 
             if (firstMouse) {
                 lastMouseX = mouseX[0];
