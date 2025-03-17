@@ -64,8 +64,12 @@ public class GUI {
     public void toDefaultGUI() {
         objects.clear();
         GUIObject mainObject = new GUIObject(new Vec(0.1,0.1), new Vec(0.3,0.8), new Vec(0.3));
-        GUILabel label1 = new GUILabel(new Vec(0.1,0.1), "https://github.com/focksss/rasterizer", 1, new Vec(1));
-        mainObject.addElement(label1);
+        GUIObject subObject = new GUIObject(new Vec(0.05,0.05), new Vec(0.9,0.1), new Vec(0.2));
+        GUILabel label1 = new GUILabel(new Vec(-0.2,-0.5), "https://github.com/focksss/rasterizer", 0.8f, new Vec(1));
+        GUILabel label2 = new GUILabel(new Vec(0.1,0.9), "this is a menu", 1, new Vec(1));
+        subObject.addElement(label1);
+        mainObject.addElement(label2);
+        mainObject.addChild(subObject);
         objects.add(mainObject);
     }
 
@@ -86,6 +90,9 @@ public class GUI {
                 pos.updateFloats();
                 textRenderer.renderText(label.text, pos.xF, pos.yF, label.scale, label.color);
             }
+        }
+        for (GUIObject child : object.children) {
+            renderObject(child, localPos, localSize);
         }
     }
 
