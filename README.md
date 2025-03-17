@@ -36,6 +36,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Orthographic shadow mapping
 - Fullscreen option and ability to rescale window (hot recreating textures and framebuffers)
 - Text rendering
+- Custom heirarchal GUI system
 - Post processing features including:
   - HDR
   - Bloom
