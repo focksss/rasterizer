@@ -63,13 +63,20 @@ public class GUI {
 
     public void toDefaultGUI() {
         objects.clear();
-        GUIObject mainObject = new GUIObject(new Vec(0.1,0.1), new Vec(0.3,0.8), new Vec(0.3));
-        GUIObject subObject = new GUIObject(new Vec(0.05,0.05), new Vec(0.9,0.1), new Vec(0.2));
+        GUIQuad quad1 = new GUIQuad(new Vec(0.3));
+        GUIQuad quad2 = new GUIQuad(new Vec(0.2));
+        GUIObject mainObject = new GUIObject(new Vec(0.1,0.1), new Vec(0.3,0.8));
+        GUIObject subObject = new GUIObject(new Vec(0.05,0.05), new Vec(0.9,0.1));
         GUILabel label1 = new GUILabel(new Vec(-0.2,-0.5), "https://github.com/focksss/rasterizer", 0.8f, new Vec(1));
         GUILabel label2 = new GUILabel(new Vec(0.1,0.9), "this is a menu", 1, new Vec(1));
-        subObject.addElement(label1);
+        
         mainObject.addElement(label2);
+        mainObject.addElement(quad1);
         mainObject.addChild(subObject);
+        
+        subObject.addElement(label1);
+        subObject.addElement(quad2);
+        
         objects.add(mainObject);
     }
 
@@ -82,40 +89,47 @@ public class GUI {
     private static void renderObject(GUIObject object, Vec parentPosition, Vec parentScale) {
         Vec localPos = parentPosition.add(parentScale.mult(object.position));
         Vec localSize = parentScale.mult(object.size);
-        renderQuad(localPos, localSize, object.backGroundColor);
         for (Object element : object.elements) {
-            if (element instanceof GUILabel) {
-                GUILabel label = (GUILabel) element;
-                Vec pos = localPos.add(localSize.mult(label.position));
-                pos.updateFloats();
-                textRenderer.renderText(label.text, pos.xF, pos.yF, label.scale, label.color);
-            }
+            renderElement(element, localPos, localSize);
         }
         for (GUIObject child : object.children) {
             renderObject(child, localPos, localSize);
         }
     }
-
-    public static void renderQuad(Vec position, Vec scale, Vec color) {
-        glBindVertexArray(VAO);
-        backgroundShader.setUniform("color", color);
-        backgroundShader.setUniform("position", position);
-        backgroundShader.setUniform("scale", scale);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+    private static void renderElement(Object element, Vec localPos, Vec localSize) {
+        if (element instanceof GUILabel) {
+            GUILabel label = (GUILabel) element;
+            Vec pos = localPos.add(localSize.mult(label.position));
+            pos.updateFloats();
+            textRenderer.renderText(label.text, pos.xF, pos.yF, label.scale, label.color);
+        } else if (element instanceof GUIButton) {
+            GUIButton button = (GUIButton) element;
+            Vec pos = localPos.add(localSize.mult(button.position));
+            Vec size = localSize.mult(button.size);
+            pos.updateFloats();
+            size.updateFloats();
+            renderQuad(pos, size, button.backgroundColor);
+            textRenderer.renderText(button.text, pos.xF, pos.yF, buttton.scale, button.color);
+            button.doButton(Run.controller.mousePos, pos, pos.add(size));
+        } else if (element instanceof GUIQuad) {
+            GUIQuad quad = (GUIQuad) element;
+            Vec pos = localPos.add(localSize.mult(quad.position));
+            Vec size = localSize.mult(quad.size);
+            pos.updateFloats();
+            size.updateFloats();
+            renderQuad(pos, size, quad.color);
+        }
     }
 
     public class GUIObject {
         Vec position;
         Vec size;
-        Vec backGroundColor;
         List<GUIObject> children = new ArrayList<>();
         List<Object> elements = new ArrayList<>();
 
-        public GUIObject(Vec position, Vec size, Vec backGroundColor) {
+        public GUIObject(Vec position, Vec size) {
             this.position = position;
             this.size = size;
-            this.backGroundColor = backGroundColor;
         }
         public void addChild(GUIObject child) {
             children.add(child);
@@ -141,22 +155,59 @@ public class GUI {
         Vec position;
         Vec size;
         float variable;
+        String text;
+        Vec backgroundColor;
+        float Lbound; float Rbound;
         private Runnable action;
 
-        public GUIButton(Vec position, Vec size, float varStart, Runnable action) {
+        public GUIButton(Vec position, Vec size, float varStart, String text, Vec color, float Lbound, float Rbound, Runnable action) {
             this.position = position;
             this.size = size;
             this.variable = varStart;
+            this.text = text;
+            this.color = color;
+            this.Lbound = Lbound;
+            this.Rbound = Rbound;
             this.action = action;
         }
 
-        public void click() {
-            action.run();
+        public void doButton(Vec mousePos, Vec buttonMin, Vec buttonMax) {
+            // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0  
+            Vec screenSpaceMin = new Vec(buttonMin.x*Run.WIDTH, (1-buttonMin.y)*Run.HEIGHT);
+            Vec screenSpaceMax = new Vec(buttonMax.x*Run.WIDTH, (1-buttonMax.y)*Run.HEIGHT);
+            //check if pressed
+            if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
+                if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
+                    if (glfwGetMouseButton(Run.window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) action.run();
+                }
+            }
         }
+    }
+    public class GUIQuad {
+        Vec position;
+        Vec size;
+        Vec color;
 
-
+        public GUIQuad(Vec position, Vec size, Vec color) {
+            this.position = position;
+            this.size = size;
+            this.color = color;
+        }
+        public GUIQuad(Vec color) {
+            position = new Vec(0);
+            size = new Vec(1);
+            this.color = color;
+        }
     }
 
+    public static void renderQuad(Vec position, Vec scale, Vec color) {
+        glBindVertexArray(VAO);
+        backgroundShader.setUniform("color", color);
+        backgroundShader.setUniform("position", position);
+        backgroundShader.setUniform("scale", scale);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
     public static class TextRenderer {
         Shader shaderProgram;
         private int VAO, VBO;
