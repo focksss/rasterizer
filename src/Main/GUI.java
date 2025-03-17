@@ -69,9 +69,12 @@ public class GUI {
         GUIObject subObject = new GUIObject(new Vec(0.05,0.05), new Vec(0.9,0.1));
         GUILabel label1 = new GUILabel(new Vec(-0.2,-0.5), "https://github.com/focksss/rasterizer", 0.8f, new Vec(1));
         GUILabel label2 = new GUILabel(new Vec(0.1,0.9), "this is a menu", 1, new Vec(1));
-        
-        mainObject.addElement(label2);
+        //        public GUIButton(Vec position, Vec size, float varStart, String text, Vec color, float Lbound, float Rbound, Runnable action) {
+        GUIButton button1 = new GUIButton(new Vec(0.05, 0.5), new Vec(0.9,0.1), "Recompile Shaders", new Vec(0.1), Run.compileShaders());
+
         mainObject.addElement(quad1);
+        mainObject.addElement(label2);
+        mainObject.addElement(button1);
         mainObject.addChild(subObject);
         
         subObject.addElement(label1);
@@ -154,13 +157,11 @@ public class GUI {
     public class GUIButton {
         Vec position;
         Vec size;
-        float variable;
         String text;
         Vec backgroundColor;
-        float Lbound; float Rbound;
         private Runnable action;
 
-        public GUIButton(Vec position, Vec size, float varStart, String text, Vec color, float Lbound, float Rbound, Runnable action) {
+        public GUIButton(Vec position, Vec size, String text, Vec color, Runnable action) {
             this.position = position;
             this.size = size;
             this.variable = varStart;
