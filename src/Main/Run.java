@@ -137,7 +137,10 @@ public class Run {
         render();
         //renderToQuad(GUI.TextRenderer.fontTexture);
         glDisable(GL_CULL_FACE);
-        GUI.textRenderer.renderText("https://github.com/focksss/rasterizer", -0.48f, -0.45f, 1, new Vec(0));
+        GUI.textRenderer.renderText("https://github.com/focksss/rasterizer", 0.05f, 0.1f, 1, new Vec(0));
+        GUI.renderQuad(new Vec(0.1,0.1), new Vec(0.2), new Vec(0.3));
+
+        GUI.renderGUI();
 
         glfwSwapBuffers(window);
     }
@@ -361,6 +364,7 @@ public class Run {
         gaussianBlurShader = new Shader(shaderPath + "\\gaussianBlurShader\\gaussianBlurFrag.glsl", shaderPath + "\\quadVertex.glsl");
         debugShader = new Shader(shaderPath + "\\debugShader\\debugShader.frag", shaderPath + "\\debugShader\\debugShader.frag");
         GUI.textRenderer.shaderProgram = new Shader("src\\shaders\\text_shader\\text_shader.frag", "src\\shaders\\text_shader\\text_shader.vert");
+        GUI.backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
     }
     static void checkWindowSize() {
         IntBuffer width = MemoryUtil.memAllocInt(1);

@@ -2,6 +2,7 @@ package Main;
 
 import Datatypes.Shader;
 import Datatypes.Vec;
+import ModelHandler.Obj;
 import Util.IOUtil;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.stb.STBTTAlignedQuad;
@@ -12,6 +13,7 @@ import org.joml.Matrix4f;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.channels.Channels;
@@ -20,6 +22,8 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import java.util.*;
 
 import static Util.IOUtil.resizeBuffer;
 import static org.lwjgl.BufferUtils.createByteBuffer;
@@ -30,14 +34,119 @@ import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.stb.STBTruetype.*;
 import static org.lwjgl.system.MemoryUtil.memSlice;
 
+/**
+ * This effectively mimics the gLTF data structure,
+ * the GUI contains GUI objects,
+ * each GUI object can contain children GUI objects,
+ * a GUI object can contain children and GUI elements.
+ * A GUI element can be a button, slider, label, or something else.
+ * Children positions and scales are relative to their parent.
+ * <p>
+ * If a GUI element does not have a parent, then it will be rendered relative to the entire screen
+ * <p>
+ * Scale and position are both relative to the parent element, where 0,0 is the bottom left, and scale and position increase up and right
+ */
+
 public class GUI {
     static TextRenderer textRenderer;
+    static Shader backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
+    static int VAO;
+
+    static List<GUIObject> objects = new ArrayList<>();
 
     public GUI() {
         textRenderer = new TextRenderer("C:\\Graphics\\rasterizer\\local_resources\\LexendDeca-VariableFont_wght.ttf");
+        VAO = glGenVertexArrays();
+        glBindVertexArray(VAO);
+        toDefaultGUI();
     }
 
-    public class GUIElement {
+    public void toDefaultGUI() {
+        objects.clear();
+        GUIObject mainObject = new GUIObject(new Vec(0.1,0.1), new Vec(0.3,0.8), new Vec(0.3));
+        GUILabel label1 = new GUILabel(new Vec(0.1,0.1), "https://github.com/focksss/rasterizer", 1, new Vec(1));
+        mainObject.addElement(label1);
+        objects.add(mainObject);
+    }
+
+    public static void renderGUI() {
+        glDisable(GL_CULL_FACE);
+        for (GUIObject object : objects) {
+            renderObject(object, new Vec(0), new Vec(1));
+        }
+    }
+    private static void renderObject(GUIObject object, Vec parentPosition, Vec parentScale) {
+        Vec localPos = parentPosition.add(parentScale.mult(object.position));
+        Vec localSize = parentScale.mult(object.size);
+        renderQuad(localPos, localSize, object.backGroundColor);
+        for (Object element : object.elements) {
+            if (element instanceof GUILabel) {
+                GUILabel label = (GUILabel) element;
+                Vec pos = localPos.add(localSize.mult(label.position));
+                pos.updateFloats();
+                textRenderer.renderText(label.text, pos.xF, pos.yF, label.scale, label.color);
+            }
+        }
+    }
+
+    public static void renderQuad(Vec position, Vec scale, Vec color) {
+        glBindVertexArray(VAO);
+        backgroundShader.setUniform("color", color);
+        backgroundShader.setUniform("position", position);
+        backgroundShader.setUniform("scale", scale);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+    public class GUIObject {
+        Vec position;
+        Vec size;
+        Vec backGroundColor;
+        List<GUIObject> children = new ArrayList<>();
+        List<Object> elements = new ArrayList<>();
+
+        public GUIObject(Vec position, Vec size, Vec backGroundColor) {
+            this.position = position;
+            this.size = size;
+            this.backGroundColor = backGroundColor;
+        }
+        public void addChild(GUIObject child) {
+            children.add(child);
+        }
+        public void addElement(Object element) {
+            elements.add(element);
+        }
+    }
+    public class GUILabel {
+        Vec position;
+        String text;
+        float scale;
+        Vec color;
+
+        public GUILabel(Vec position, String text, float scale, Vec color) {
+            this.position = position;
+            this.text = text;
+            this.scale = scale;
+            this.color = color;
+        }
+    }
+    public class GUIButton {
+        Vec position;
+        Vec size;
+        float variable;
+        private Runnable action;
+
+        public GUIButton(Vec position, Vec size, float varStart, Runnable action) {
+            this.position = position;
+            this.size = size;
+            this.variable = varStart;
+            this.action = action;
+        }
+
+        public void click() {
+            action.run();
+        }
+
 
     }
 
@@ -97,8 +206,10 @@ public class GUI {
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
             // Render each character
-            float xpos = x*Run.WIDTH;
-            y *= -Run.HEIGHT;
+            float xpos = -Run.WIDTH*0.5f + x*Run.WIDTH;
+            y = (Run.HEIGHT*0.5f - y*Run.HEIGHT);
+            //float xpos = x*Run.WIDTH;
+            //y *= -Run.HEIGHT;
             for (int i = 0; i < text.length(); i++) {
                 char c = text.charAt(i);
                 if (c < 32 || c > 127) continue; // Skip characters outside the range
