@@ -51,6 +51,7 @@ import static org.lwjgl.system.MemoryUtil.memSlice;
 public class GUI {
     static TextRenderer textRenderer;
     static Shader backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
+    static Shader pointShader = new Shader("src\\shaders\\pointShader\\pointShader.frag", "src\\shaders\\pointShader\\pointShader.vert");
     static int VAO;
 
     static List<GUIObject> objects = new ArrayList<>();
@@ -156,7 +157,12 @@ public class GUI {
         textRenderer.renderText(label.text, pos.xF, pos.yF, label.scale, label.color);
     }
     private static void renderPoint(Vec localPos, float size, Vec color) {
-        // To be implemented
+        glBindVertexArray(VAO);
+        pointShader.setUniform("color", color);
+        pointShader.setUniform("pointPosition", localPos);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glPointSize(10);
+        glDrawArrays(GL_POINTS, 0, 1);
     }
     private static void renderLine(Vec localPos1, Vec localPos2, float width, Vec color) {
         // To be implemented
