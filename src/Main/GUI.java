@@ -51,6 +51,7 @@ import static org.lwjgl.system.MemoryUtil.memSlice;
 public class GUI {
     static TextRenderer textRenderer;
     static Shader backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
+    static Shader pointShader = new Shader("src\\shaders\\pointShader\\pointShader.frag", "src\\shaders\\pointShader\\pointShader.vert");
     static int VAO;
 
     static List<GUIObject> objects = new ArrayList<>();
@@ -77,14 +78,17 @@ public class GUI {
         GUILabel label2 = new GUILabel(new Vec(0.1, 0.9), "Settings", 2, new Vec(1));
         GUILabel label3 = new GUILabel(new Vec(0.1, 0.4), "Recompile Shaders", 1, new Vec(1));
         GUILabel label4 = new GUILabel(new Vec(0.1, 0.4), "Take Screenshot", 1, new Vec(1));
+        GUILabel label6 = new GUILabel(new Vec(0.1, 0.8), "Exposure", 0.5f, new Vec(1));
 
         GUIButton button1 = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), label3, quad2, Run::compileShaders);
         GUIButton button2 = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), label4, quad2, Controller::screenshot);
+        GUISlider slider1 = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), label6, quad2, 0, 10, new Vec(1), new Vec(1));
 
         mainObject.addElement(quad1);
         mainObject.addElement(label2);
         mainObject.addElement(button1);
         mainObject.addElement(button2);
+        mainObject.addElement(slider1);
 
         mainObject.addChild(subObject);
         mainObject.addChild(subObject1);
@@ -127,6 +131,17 @@ public class GUI {
             renderQuad(pos, size, button.quad.color.add(new Vec(0.05).mult(button.hovered)));
             renderLabel(button.label, pos, size);
             button.doButton(Run.controller.mousePos, pos, pos.add(size));
+        } else if (elment instanceof GUISlider) {
+            GUISlider slider = (GUISlider) element;
+            Vec pos = localPos.add(localSize.mult(slider.position));
+            Vec size = localSize.mult(slider.size);
+            renderQuad(pos, size, slider.quad.color);
+            renderLabel(slider.label, pos, size);
+            Vec p1 = pos.add(size.mult(0.05,0.5));
+            Vec p2 = pos.add(size.mult(0.95, 0.5));
+            renderLine(p1, p2, slider.lineColor);
+            renderPoint(p1.add((p2.sub(p1)).mult((double) slider.value)), 10, slider.pointColor);
+            slider.doSlider(Run.controller.mousePos, pos, p1, p2);
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -140,6 +155,17 @@ public class GUI {
         Vec pos = localPos.add(localSize.mult(label.position));
         pos.updateFloats();
         textRenderer.renderText(label.text, pos.xF, pos.yF, label.scale, label.color);
+    }
+    private static void renderPoint(Vec localPos, float size, Vec color) {
+        glBindVertexArray(VAO);
+        pointShader.setUniform("color", color);
+        pointShader.setUniform("pointPosition", localPos);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glPointSize(10);
+        glDrawArrays(GL_POINTS, 0, 1);
+    }
+    private static void renderLine(Vec localPos1, Vec localPos2, float width, Vec color) {
+        // To be implemented
     }
 
     public static class GUIObject {
@@ -219,6 +245,46 @@ public class GUI {
             position = new Vec(0);
             size = new Vec(1);
             this.color = color;
+        }
+    }
+    public class GUISlider {
+        Vec position;
+        Vec size;
+        GUILabel label;
+        GUIQuad quad;
+        float Lbound;
+        float Rbound; 
+        float value = 0;
+        Vec lineColor;
+        Vec pointColor;
+
+        public GUISlider(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, float Rbound, Vec lineColor, Vec pointColor) {
+            this.position = position;
+            this.size = size;
+            this.label = label;
+            this.quad = quad;
+            this.Lbound = Lbound;
+            this.Rbound = Rbound;
+            this.lineColor = lineColor;
+            this.pointColor = pointColor;
+        }
+
+        public void doSlider(Vec mousePos, Vec pointPos, Vec p1, Vec p2) {
+            // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
+            float screenSpaceP1x = p1.x*Run.WIDTH;
+            float screenSpaceP2x = p2.x*Run.WIDTH;
+            Vec screenSpacePos = new Vec(pointPos.x*Run.WIDTH, (1-pointPos.y)*Run.HEIGHT);
+            Vec screenSpaceMin = screenSpacePos.sub(new Vec(10));
+            Vec screenSpaceMax = screenSpacePos.add(new Vec(10));
+            //check if pressed
+            if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
+                if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
+                    if (glfwGetMouseButton(Run.window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
+                        float percent = (screenSpacePos.x - screenSpaceP1x) / (screenSpaceP2x - screenSpaceP1x);
+                        value = Lbound + percent*(Rbound-Lbound);
+                    }
+                }
+            }
         }
     }
 
