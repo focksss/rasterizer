@@ -29,6 +29,7 @@ public class Controller {
     long window;
 
     boolean mouseMode = true;
+    static boolean escaped = true;
     boolean firstMouse = true;
     boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f1WasDown = false; boolean f2WasDown = false; boolean f3WasDown = false; boolean f4WasDown = false; boolean f11WasDown = false;
     double lastMouseX = 0;
@@ -55,6 +56,7 @@ public class Controller {
             if (!escapeWasDown) {
                 escapeWasDown = true;
                 //action
+                escaped = !escaped;
                 if (mouseMode) {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                     mouseMode = false;
@@ -208,7 +210,7 @@ public class Controller {
             e.printStackTrace();
         }
     }
-    public void screenshot() {
+    public static void screenshot() {
         int width = Run.WIDTH;
         int height = Run.HEIGHT;
 

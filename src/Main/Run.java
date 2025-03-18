@@ -54,6 +54,7 @@ public class Run {
     public static boolean doSSAO = true; static boolean CAP_FPS = true; static boolean borderless_fullscreen = true;
 
     public static long startTime = System.nanoTime();
+    static float currFPS = 0;
     public static long time = 0;
 
     public static int SHADOW_RES = 8192;
@@ -108,7 +109,8 @@ public class Run {
             frames++;
             double thisFrameTime = (startTime - lastTime) / 1_000_000_000.0;
             if (thisFrameTime >= 0.5) {
-                updateLine(0, "FPS: " + frames / thisFrameTime);
+                currFPS = (float) (frames / thisFrameTime);
+                updateLine(0, "FPS: " + currFPS);
                 frames = 0;
                 lastTime = startTime;
             }
@@ -135,9 +137,11 @@ public class Run {
         render();
         glDisable(GL_CULL_FACE);
 
-//        ((GUI.GUILabel) GUI.objects.get(0).children.get(0).elements.get(1))
-//                .setText(Controller.mousePos.x + ", " + Controller.mousePos.y);
-        GUI.renderGUI();
+        ((GUI.GUILabel) GUI.objects.get(0).children.get(0).elements.get(1))
+                .setText("FPS: " + (int)currFPS);
+        ((GUI.GUILabel) GUI.objects.get(0).children.get(1).elements.get(1))
+                .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
+        if (Controller.escaped) GUI.renderGUI();
 
         glfwSwapBuffers(window);
     }

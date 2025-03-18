@@ -66,20 +66,33 @@ public class GUI {
         objects.clear();
         GUIQuad quad1 = new GUIQuad(new Vec(0.3));
         GUIQuad quad2 = new GUIQuad(new Vec(0.2));
+
         GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
-        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.9, 0.1));
-        GUILabel label1 = new GUILabel(new Vec(0.05, 0.4), "https://github.com/focksss/rasterizer", 1f, new Vec(1));
+        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.2, 0.1));
+        GUIObject subObject1 = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1));
+        //fps pos
+        GUILabel label1 = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
+        GUILabel label5 = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
+        //
         GUILabel label2 = new GUILabel(new Vec(0.1, 0.9), "Settings", 2, new Vec(1));
         GUILabel label3 = new GUILabel(new Vec(0.1, 0.4), "Recompile Shaders", 1, new Vec(1));
+        GUILabel label4 = new GUILabel(new Vec(0.1, 0.4), "Take Screenshot", 1, new Vec(1));
+
         GUIButton button1 = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), label3, quad2, Run::compileShaders);
+        GUIButton button2 = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), label4, quad2, Controller::screenshot);
 
         mainObject.addElement(quad1);
         mainObject.addElement(label2);
         mainObject.addElement(button1);
+        mainObject.addElement(button2);
+
         mainObject.addChild(subObject);
+        mainObject.addChild(subObject1);
 
         subObject.addElement(quad2);
         subObject.addElement(label1);
+        subObject1.addElement(quad2);
+        subObject1.addElement(label5);
 
         objects.add(mainObject);
     }
