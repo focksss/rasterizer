@@ -66,11 +66,12 @@ public class GUI {
         objects.clear();
         GUIQuad quad1 = new GUIQuad(new Vec(0.3));
         GUIQuad quad2 = new GUIQuad(new Vec(0.2));
-        GUIObject mainObject = new GUIObject(new Vec(0.1,0.1), new Vec(0.3,0.8));
-        GUIObject subObject = new GUIObject(new Vec(0.05,0.05), new Vec(0.9,0.1));
-        GUILabel label1 = new GUILabel(new Vec(-0.2,-0.5), "https://github.com/focksss/rasterizer", 0.8f, new Vec(1));
-        GUILabel label2 = new GUILabel(new Vec(0.1,0.9), "this is a menu", 1, new Vec(1));
-        GUIButton button1 = new GUIButton(new Vec(0.05, 0.5), new Vec(0.9,0.1), "Recompile Shaders", new Vec(0.1), Run::compileShaders);
+        GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
+        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.9, 0.1));
+        GUILabel label1 = new GUILabel(new Vec(0.05, 0.4), "https://github.com/focksss/rasterizer", 1f, new Vec(1));
+        GUILabel label2 = new GUILabel(new Vec(0.1, 0.9), "Settings", 2, new Vec(1));
+        GUILabel label3 = new GUILabel(new Vec(0.1, 0.4), "Recompile Shaders", 1, new Vec(1));
+        GUIButton button1 = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), label3, quad2, Run::compileShaders);
 
         mainObject.addElement(quad1);
         mainObject.addElement(label2);
@@ -100,31 +101,35 @@ public class GUI {
         }
     }
     private static void renderElement(Object element, Vec localPos, Vec localSize) {
-        if (element instanceof GUILabel) {
-            GUILabel label = (GUILabel) element;
-            Vec pos = localPos.add(localSize.mult(label.position));
-            pos.updateFloats();
-            textRenderer.renderText(label.text, pos.xF, pos.yF, label.scale, label.color);
+        if (element instanceof GUILabel label) {
+            renderLabel(label, localPos, localSize);
+        } else if (element instanceof GUIQuad quad) {
+            renderQuad(quad, localPos, localSize);
         } else if (element instanceof GUIButton) {
             GUIButton button = (GUIButton) element;
             Vec pos = localPos.add(localSize.mult(button.position));
             Vec size = localSize.mult(button.size);
             pos.updateFloats();
             size.updateFloats();
-            renderQuad(pos, size, button.backgroundColor);
-            textRenderer.renderText(button.text, pos.xF, pos.yF, 1, button.color);
+            renderQuad(pos, size, button.quad.color.add(new Vec(0.05).mult(button.hovered)));
+            renderLabel(button.label, pos, size);
             button.doButton(Run.controller.mousePos, pos, pos.add(size));
-        } else if (element instanceof GUIQuad) {
-            GUIQuad quad = (GUIQuad) element;
-            Vec pos = localPos.add(localSize.mult(quad.position));
-            Vec size = localSize.mult(quad.size);
-            pos.updateFloats();
-            size.updateFloats();
-            renderQuad(pos, size, quad.color);
         }
     }
+    private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
+        Vec pos = localPos.add(localSize.mult(quad.position));
+        Vec size = localSize.mult(quad.size);
+        pos.updateFloats();
+        size.updateFloats();
+        renderQuad(pos, size, quad.color);
+    }
+    private static void renderLabel(GUILabel label, Vec localPos, Vec localSize) {
+        Vec pos = localPos.add(localSize.mult(label.position));
+        pos.updateFloats();
+        textRenderer.renderText(label.text, pos.xF, pos.yF, label.scale, label.color);
+    }
 
-    public class GUIObject {
+    public static class GUIObject {
         Vec position;
         Vec size;
         List<GUIObject> children = new ArrayList<>();
@@ -141,7 +146,7 @@ public class GUI {
             elements.add(element);
         }
     }
-    public class GUILabel {
+    public static class GUILabel {
         Vec position;
         String text;
         float scale;
@@ -157,19 +162,19 @@ public class GUI {
             this.text = text;
         }
     }
-    public class GUIButton {
-        Vec color;
+    public static class GUIButton {
         Vec position;
         Vec size;
-        String text;
-        Vec backgroundColor;
-        private Runnable action;
+        GUILabel label;
+        GUIQuad quad;
+        Runnable action;
+        boolean hovered;
 
-        public GUIButton(Vec position, Vec size, String text, Vec color, Runnable action) {
+        public GUIButton(Vec position, Vec size, GUILabel label, GUIQuad quad, Runnable action) {
             this.position = position;
             this.size = size;
-            this.text = text;
-            this.color = color;
+            this.label = label;
+            this.quad = quad;
             this.action = action;
         }
 
@@ -178,8 +183,10 @@ public class GUI {
             Vec screenSpaceMin = new Vec(buttonMin.x*Run.WIDTH, (1-buttonMax.y)*Run.HEIGHT);
             Vec screenSpaceMax = new Vec(buttonMax.x*Run.WIDTH, (1-buttonMin.y)*Run.HEIGHT);
             //check if pressed
+            hovered = false;
             if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
                 if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
+                    hovered = true;
                     if (glfwGetMouseButton(Run.window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) action.run();
                 }
             }
@@ -254,6 +261,7 @@ public class GUI {
             shaderProgram.setUniform("width", Run.WIDTH);
             shaderProgram.setUniform("height", Run.HEIGHT);
             shaderProgram.setUniform("textColor", color);
+            shaderProgram.setUniform("pos", new Vec(x,y));
 
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, fontTexture);
@@ -266,8 +274,8 @@ public class GUI {
             glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
             // Render each character
-            float xpos = -Run.WIDTH*0.5f + x*Run.WIDTH;
-            y = (Run.HEIGHT*0.5f - y*Run.HEIGHT);
+            float xpos = 0;
+            y = 0;
             //float xpos = x*Run.WIDTH;
             //y *= -Run.HEIGHT;
             for (int i = 0; i < text.length(); i++) {

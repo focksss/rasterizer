@@ -135,8 +135,8 @@ public class Run {
         render();
         glDisable(GL_CULL_FACE);
 
-        ((GUI.GUILabel) GUI.objects.get(0).children.get(0).elements.get(1))
-                .setText(Controller.mousePos.x + ", " + Controller.mousePos.y);
+//        ((GUI.GUILabel) GUI.objects.get(0).children.get(0).elements.get(1))
+//                .setText(Controller.mousePos.x + ", " + Controller.mousePos.y);
         GUI.renderGUI();
 
         glfwSwapBuffers(window);
