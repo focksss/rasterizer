@@ -27,6 +27,7 @@ import java.util.*;
 
 import static Util.IOUtil.resizeBuffer;
 import static org.lwjgl.BufferUtils.createByteBuffer;
+import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
@@ -69,17 +70,16 @@ public class GUI {
         GUIObject subObject = new GUIObject(new Vec(0.05,0.05), new Vec(0.9,0.1));
         GUILabel label1 = new GUILabel(new Vec(-0.2,-0.5), "https://github.com/focksss/rasterizer", 0.8f, new Vec(1));
         GUILabel label2 = new GUILabel(new Vec(0.1,0.9), "this is a menu", 1, new Vec(1));
-        //        public GUIButton(Vec position, Vec size, float varStart, String text, Vec color, float Lbound, float Rbound, Runnable action) {
-        GUIButton button1 = new GUIButton(new Vec(0.05, 0.5), new Vec(0.9,0.1), "Recompile Shaders", new Vec(0.1), Run.compileShaders());
+        GUIButton button1 = new GUIButton(new Vec(0.05, 0.5), new Vec(0.9,0.1), "Recompile Shaders", new Vec(0.1), Run::compileShaders);
 
         mainObject.addElement(quad1);
         mainObject.addElement(label2);
         mainObject.addElement(button1);
         mainObject.addChild(subObject);
-        
-        subObject.addElement(label1);
+
         subObject.addElement(quad2);
-        
+        subObject.addElement(label1);
+
         objects.add(mainObject);
     }
 
@@ -112,7 +112,7 @@ public class GUI {
             pos.updateFloats();
             size.updateFloats();
             renderQuad(pos, size, button.backgroundColor);
-            textRenderer.renderText(button.text, pos.xF, pos.yF, buttton.scale, button.color);
+            textRenderer.renderText(button.text, pos.xF, pos.yF, 1, button.color);
             button.doButton(Run.controller.mousePos, pos, pos.add(size));
         } else if (element instanceof GUIQuad) {
             GUIQuad quad = (GUIQuad) element;
@@ -153,8 +153,12 @@ public class GUI {
             this.scale = scale;
             this.color = color;
         }
+        public void setText(String text) {
+            this.text = text;
+        }
     }
     public class GUIButton {
+        Vec color;
         Vec position;
         Vec size;
         String text;
@@ -164,18 +168,15 @@ public class GUI {
         public GUIButton(Vec position, Vec size, String text, Vec color, Runnable action) {
             this.position = position;
             this.size = size;
-            this.variable = varStart;
             this.text = text;
             this.color = color;
-            this.Lbound = Lbound;
-            this.Rbound = Rbound;
             this.action = action;
         }
 
         public void doButton(Vec mousePos, Vec buttonMin, Vec buttonMax) {
-            // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0  
-            Vec screenSpaceMin = new Vec(buttonMin.x*Run.WIDTH, (1-buttonMin.y)*Run.HEIGHT);
-            Vec screenSpaceMax = new Vec(buttonMax.x*Run.WIDTH, (1-buttonMax.y)*Run.HEIGHT);
+            // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
+            Vec screenSpaceMin = new Vec(buttonMin.x*Run.WIDTH, (1-buttonMax.y)*Run.HEIGHT);
+            Vec screenSpaceMax = new Vec(buttonMax.x*Run.WIDTH, (1-buttonMin.y)*Run.HEIGHT);
             //check if pressed
             if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
                 if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {

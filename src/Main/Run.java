@@ -21,8 +21,6 @@ import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.nuklear.Nuklear.nk_input_begin;
-import static org.lwjgl.nuklear.Nuklear.nk_input_end;
 import static org.lwjgl.opengl.ARBFramebufferSRGB.GL_FRAMEBUFFER_SRGB;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
@@ -137,6 +135,8 @@ public class Run {
         render();
         glDisable(GL_CULL_FACE);
 
+        ((GUI.GUILabel) GUI.objects.get(0).children.get(0).elements.get(1))
+                .setText(Controller.mousePos.x + ", " + Controller.mousePos.y);
         GUI.renderGUI();
 
         glfwSwapBuffers(window);
