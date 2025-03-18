@@ -7,6 +7,7 @@ out vec2 TexCoord;
 
 uniform int width;
 uniform int height;
+uniform vec3 pos;
 
 void main() {
     mat4 test = mat4(
@@ -16,7 +17,7 @@ void main() {
     vec4(0.0, 0.0, 0.0, 1.0)           // Fourth column
     );
 
-    gl_Position = test * vec4(vec2(vertex.x, vertex.y), 0, 1.0);
+    gl_Position = test * vec4(vec2(vertex.x, vertex.y), 0, 1.0) + vec4(pos*2 - 1,0);
     TexCoord = texCoord;
     //TexCoord = (vertices[gl_VertexID] + 1.0) * 0.5;
     //gl_Position = vec4(vertices[gl_VertexID], 0, 1.0);
