@@ -261,6 +261,24 @@ public class GUI {
             this.lineColor = lineColor;
             this.pointColor = pointColor;
         }
+
+        public void doSlider(Vec mousePos, Vec pointPos, Vec p1, Vec p2) {
+            // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
+            float screenSpaceP1x = p1.x*Run.WIDTH;
+            float screenSpaceP2x = p2.x*Run.WIDTH;
+            Vec screenSpacePos = new Vec(pointPos.x*Run.WIDTH, (1-pointPos.y)*Run.HEIGHT);
+            Vec screenSpaceMin = screenSpacePos.sub(new Vec(10));
+            Vec screenSpaceMax = screenSpacePos.add(new Vec(10));
+            //check if pressed
+            if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
+                if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
+                    if (glfwGetMouseButton(Run.window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
+                        float percent = (screenSpacePos.x - screenSpaceP1x) / (screenSpaceP2x - screenSpaceP1x);
+                        value = Lbound + percent*(Rbound-Lbound);
+                    }
+                }
+            }
+        }
     }
 
     public static void renderQuad(Vec position, Vec scale, Vec color) {
