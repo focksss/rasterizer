@@ -81,7 +81,7 @@ public class GUI {
 
         GUIButton button1 = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), label3, quad2, Run::compileShaders);
         GUIButton button2 = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), label4, quad2, Controller::screenshot);
-        GUISlider slider1 = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), label6, quad2, 0, 10);
+        GUISlider slider1 = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), label6, quad2, 0, 10, new Vec(1), new Vec(1));
 
         mainObject.addElement(quad1);
         mainObject.addElement(label2);
@@ -130,6 +130,16 @@ public class GUI {
             renderQuad(pos, size, button.quad.color.add(new Vec(0.05).mult(button.hovered)));
             renderLabel(button.label, pos, size);
             button.doButton(Run.controller.mousePos, pos, pos.add(size));
+        } else if (elment instanceof GUISlider) {
+            GUISlider slider = (GUISlider) element;
+            Vec pos = localPos.add(localSize.mult(slider.position));
+            Vec size = localSize.mult(slider.size);
+            renderQuad(pos, size, slider.quad.color);
+            renderLabel(slider.label, pos, size);
+            Vec p1 = pos.add(size.mult(0.05,0.5));
+            Vec p2 = pos.add(size.mult(0.95, 0.5));
+            renderLine(p1, p2, slider.lineColor);
+            renderPoint(p1.add((p2.sub(p1)).mult((double) slider.value)), 10, slider.pointColor);
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -237,14 +247,19 @@ public class GUI {
         GUIQuad quad;
         float Lbound;
         float Rbound; 
+        float value = 0;
+        Vec lineColor;
+        Vec pointColor;
 
-        public GUISlider(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, float Rbound) {
+        public GUISlider(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, float Rbound, Vec lineColor, Vec pointColor) {
             this.position = position;
             this.size = size;
             this.label = label;
             this.quad = quad;
             this.Lbound = Lbound;
             this.Rbound = Rbound;
+            this.lineColor = lineColor;
+            this.pointColor = pointColor;
         }
     }
 
