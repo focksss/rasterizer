@@ -140,6 +140,7 @@ public class GUI {
             Vec p2 = pos.add(size.mult(0.95, 0.5));
             renderLine(p1, p2, slider.lineColor);
             renderPoint(p1.add((p2.sub(p1)).mult((double) slider.value)), 10, slider.pointColor);
+            slider.doSlider(Run.controller.mousePos, pos, p1, p2);
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
