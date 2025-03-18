@@ -77,7 +77,7 @@ public class GUI {
         GUILabel label2 = new GUILabel(new Vec(0.1, 0.9), "Settings", 2, new Vec(1));
         GUILabel label3 = new GUILabel(new Vec(0.1, 0.4), "Recompile Shaders", 1, new Vec(1));
         GUILabel label4 = new GUILabel(new Vec(0.1, 0.4), "Take Screenshot", 1, new Vec(1));
-        GUILabel label6 = new GUILabel(new Vec(0.1, 0.4), "Exposure", 1, new Vec(1));
+        GUILabel label6 = new GUILabel(new Vec(0.1, 0.8), "Exposure", 0.5f, new Vec(1));
 
         GUIButton button1 = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), label3, quad2, Run::compileShaders);
         GUIButton button2 = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), label4, quad2, Controller::screenshot);
