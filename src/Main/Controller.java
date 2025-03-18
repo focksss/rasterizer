@@ -20,7 +20,7 @@ public class Controller {
     Vec cameraPos;
     Vec cameraRot;
 
-    Vec mousePos;
+    static Vec mousePos;
     
     float moveSpeed = 1f;
     float sensitivity = 5f;
@@ -120,7 +120,7 @@ public class Controller {
         if (glfwGetKey(window, GLFW_KEY_F2) == GLFW_PRESS) {
             if (!f2WasDown) {
                 f2WasDown = true;
-                screenshot(Run.postProcessingTex);
+                screenshot();
             }
         } else {f2WasDown = false;}
         if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS) {
@@ -146,7 +146,7 @@ public class Controller {
     private void doMouse() {
         double[] mouseX = new double[1];
         double[] mouseY = new double[1];
-        glfwGetCursorPos(window, mouseX, mouseY)
+        glfwGetCursorPos(window, mouseX, mouseY);
 
         mousePos = new Vec(mouseX[0], mouseY[0]);
         
@@ -200,6 +200,41 @@ public class Controller {
 
         String timestamp = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date());
         String folderPath = "screenshots/";
+        String filePath = folderPath + "screenshot_" + timestamp + ".png";
+        File file = new File(filePath);
+        try {
+            ImageIO.write(image, "PNG", file);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void screenshot() {
+        int width = Run.WIDTH;
+        int height = Run.HEIGHT;
+
+        ByteBuffer buffer = MemoryUtil.memAlloc(width * height * 4);
+
+        glReadBuffer(GL_FRONT);
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int i = (x + (height - y - 1) * width) * 4;
+                int r = buffer.get(i) & 0xFF;
+                int g = buffer.get(i + 1) & 0xFF;
+                int b = buffer.get(i + 2) & 0xFF;
+                int a = buffer.get(i + 3) & 0xFF;
+                int argb = (a << 24) | (r << 16) | (g << 8) | b;
+                image.setRGB(x, y, argb);
+            }
+        }
+
+        MemoryUtil.memFree(buffer);
+
+        String timestamp = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date());
+        String folderPath = "screenshots/";
+        new File(folderPath).mkdirs();
         String filePath = folderPath + "screenshot_" + timestamp + ".png";
         File file = new File(filePath);
         try {
