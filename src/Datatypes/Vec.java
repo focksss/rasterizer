@@ -222,4 +222,9 @@ public class Vec {
     public void println() {
         System.out.print("(" + (x) + "," + (y) + "," + (z) + ")\n");
     }
+
+    public Vec mult(boolean bool) {
+        double m = bool ? 1 : 0;
+        return new Vec(x*m, y*m, z*m, w*m);
+    }
 }
