@@ -74,9 +74,9 @@ public class GUI {
         GUIQuad quad2 = new GUIQuad(new Vec(0.2));
         GUIQuad quad3 = new GUIQuad(new Vec(0.8,0.2,0.2));
 
-        GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
-        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1));
-        GUIObject subObject1 = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1));
+        GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8), NULL);
+        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1), mainObject);
+        GUIObject subObject1 = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1), mainObject);
 
         GUILabel label0 = new GUILabel(new Vec(), "", 0f, new Vec());
         GUILabel label1 = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
@@ -125,6 +125,23 @@ public class GUI {
     private static void renderObject(GUIObject object, Vec parentPosition, Vec parentScale) {
         Vec localPos = parentPosition.add(parentScale.mult(object.position));
         Vec localSize = parentScale.mult(object.size);
+        if (object.clipTo != NULL) {
+            Vec clipMin = object.clipTo.position.mult(2).sub(1);
+            Vec clipMax = (object.clipTo.position.add(clipTo.size)).mult(2).sub(1);
+            pointShader.setUniform("clipMin", clipMin);
+            pointShader.setUniform("clipMax", clipMax);
+            lineShader.setUniform("clipMin", clipMin);
+            lineShader.setUniform("clipMax", clipMax);
+            backgroundShader.setUniform("clipMin", clipMin);
+            backgroundShader.setUniform("clipMax", clipMax);
+        } else {
+            pointShader.setUniform("clipMin", new Vec(-1));
+            pointShader.setUniform("clipMax", new Vec(1));
+            lineShader.setUniform("clipMin", new Vec(-1));
+            lineShader.setUniform("clipMax", new Vec(1));
+            backgroundShader.setUniform("clipMin", new Vec(-1));
+            backgroundShader.setUniform("clipMax", new Vec(1));
+        }
         for (Object element : object.elements) {
             renderElement(element, localPos, localSize);
         }
@@ -197,10 +214,12 @@ public class GUI {
         Vec size;
         List<GUIObject> children = new ArrayList<>();
         List<Object> elements = new ArrayList<>();
+        GUIObject clipTo;
 
-        public GUIObject(Vec position, Vec size) {
+        public GUIObject(Vec position, Vec size, GUIObject clipTo) {
             this.position = position;
             this.size = size;
+            this.clipTo = clipTo;
         }
         public void addChild(GUIObject child) {
             children.add(child);
