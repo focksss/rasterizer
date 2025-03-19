@@ -86,12 +86,14 @@ public class GUI {
         GUILabel label3 = new GUILabel(new Vec(0.1, 0.4), "Recompile Shaders", 1, new Vec(1));
         GUILabel label4 = new GUILabel(new Vec(0.1, 0.4), "Take Screenshot", 1, new Vec(1));
         GUILabel label6 = new GUILabel(new Vec(0.05, 0.65), "Exposure", 0.8f, new Vec(1));
+        GUILabel label8 = new GUILabel(new Vec(0.05, 0.65), "Gamma", 0.8f, new Vec(1));
         GUILabel label7 = new GUILabel(new Vec(0.1, 0.4), "Exit", 1f, new Vec(0));
 
         GUIButton button1 = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), label3, quad2, Run::compileShaders);
         GUIButton button2 = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), label4, quad2, Controller::screenshot);
         GUIButton button3 = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), label7, quad3, Run::Quit);
         GUISlider slider1 = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), label6, quad2, 0, 10, new Vec(1), new Vec(1), Run.EXPOSURE);
+        GUISlider slider2 = new GUISlider(new Vec(0.05, 0.25), new Vec(0.9, 0.1), label8, quad2, 0, 2, new Vec(1), new Vec(1), Run.GAMMA);
         GUIButton button4 = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), label0, quad2, mainObject::toMouse);
 
         mainObject.addElement(quad1);
@@ -101,6 +103,7 @@ public class GUI {
         mainObject.addElement(button2);
         mainObject.addElement(button3);
         mainObject.addElement(slider1);
+        mainObject.addElement(slider2);
 
         mainObject.addChild(subObject);
         mainObject.addChild(subObject1);

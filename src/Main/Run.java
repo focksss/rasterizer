@@ -191,8 +191,11 @@ public class Run {
                 .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
         ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).label
                 .setText("Exposure: " + EXPOSURE);
+        ((GUI.GUISlider) GUI.objects.get(0).elements.get(7)).label
+                .setText("Gamma: " + GAMMA);
         if (Controller.escaped) GUI.renderGUI();
         EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).value;
+        GAMMA = ((GUI.GUISlider) GUI.objects.get(0).elements.get(7)).value;
 
         glfwSwapBuffers(window);
     }
