@@ -18,9 +18,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 
 
 ## Latest Screenshot
-<img src="https://github.com/user-attachments/assets/0fb738f3-96b3-453b-a085-31474312fb00" width="1080">
-
-
+<img src="https://github.com/user-attachments/assets/33940a09-2141-472c-a855-20336d629761" width="1080">
 
 
 
@@ -37,6 +35,9 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Fullscreen option and ability to rescale window (hot recreating textures and framebuffers)
 - Text rendering
 - Custom heirarchal GUI system
+  - Sliders
+  - Buttons
+  - Ability to add/edit GUI elements during runtime
 - Post processing features including:
   - HDR
   - Bloom
