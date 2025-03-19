@@ -17,7 +17,3 @@ void main() {
         } else {discard;}
     } else {discard;}
 }
-    vec2 temp = gl_PointCoord - vec2(0.5);
-    float f = dot(temp, temp);
-    if (f>0.25) {discard; return;}
-    FragColor = vec4(color,1);
