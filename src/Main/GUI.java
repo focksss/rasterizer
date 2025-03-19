@@ -4,6 +4,7 @@ import Datatypes.Shader;
 import Datatypes.Vec;
 import ModelHandler.Obj;
 import Util.IOUtil;
+import static Util.MathUtil.*;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.stb.STBTTAlignedQuad;
 import org.lwjgl.stb.STBTTBakedChar;
@@ -52,7 +53,11 @@ public class GUI {
     static TextRenderer textRenderer;
     static Shader backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
     static Shader pointShader = new Shader("src\\shaders\\pointShader\\pointShader.frag", "src\\shaders\\pointShader\\pointShader.vert");
+    static Shader lineShader = new Shader("src\\shaders\\lineShader\\line.frag", "src\\shaders\\lineShader\\line.vert");
     static int VAO;
+
+    static int mouseInteractingWith = -1;
+    static int interactables = 0;
 
     static List<GUIObject> objects = new ArrayList<>();
 
@@ -67,9 +72,10 @@ public class GUI {
         objects.clear();
         GUIQuad quad1 = new GUIQuad(new Vec(0.3));
         GUIQuad quad2 = new GUIQuad(new Vec(0.2));
+        GUIQuad quad3 = new GUIQuad(new Vec(0.8,0.2,0.2));
 
         GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
-        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.2, 0.1));
+        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1));
         GUIObject subObject1 = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1));
         //fps pos
         GUILabel label1 = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
@@ -78,16 +84,19 @@ public class GUI {
         GUILabel label2 = new GUILabel(new Vec(0.1, 0.9), "Settings", 2, new Vec(1));
         GUILabel label3 = new GUILabel(new Vec(0.1, 0.4), "Recompile Shaders", 1, new Vec(1));
         GUILabel label4 = new GUILabel(new Vec(0.1, 0.4), "Take Screenshot", 1, new Vec(1));
-        GUILabel label6 = new GUILabel(new Vec(0.1, 0.8), "Exposure", 0.5f, new Vec(1));
+        GUILabel label6 = new GUILabel(new Vec(0.05, 0.65), "Exposure", 0.8f, new Vec(1));
+        GUILabel label7 = new GUILabel(new Vec(0.1, 0.4), "Exit", 1f, new Vec(0));
 
         GUIButton button1 = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), label3, quad2, Run::compileShaders);
         GUIButton button2 = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), label4, quad2, Controller::screenshot);
-        GUISlider slider1 = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), label6, quad2, 0, 10, new Vec(1), new Vec(1));
+        GUIButton button3 = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), label7, quad3, Run::Quit);
+        GUISlider slider1 = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), label6, quad2, 0, 10, new Vec(1), new Vec(1), Run.EXPOSURE);
 
         mainObject.addElement(quad1);
         mainObject.addElement(label2);
         mainObject.addElement(button1);
         mainObject.addElement(button2);
+        mainObject.addElement(button3);
         mainObject.addElement(slider1);
 
         mainObject.addChild(subObject);
@@ -130,18 +139,19 @@ public class GUI {
             size.updateFloats();
             renderQuad(pos, size, button.quad.color.add(new Vec(0.05).mult(button.hovered)));
             renderLabel(button.label, pos, size);
-            button.doButton(Run.controller.mousePos, pos, pos.add(size));
-        } else if (elment instanceof GUISlider) {
+            button.doButton(Controller.mousePos, pos, pos.add(size));
+        } else if (element instanceof GUISlider) {
             GUISlider slider = (GUISlider) element;
             Vec pos = localPos.add(localSize.mult(slider.position));
             Vec size = localSize.mult(slider.size);
             renderQuad(pos, size, slider.quad.color);
             renderLabel(slider.label, pos, size);
-            Vec p1 = pos.add(size.mult(0.05,0.5));
-            Vec p2 = pos.add(size.mult(0.95, 0.5));
-            renderLine(p1, p2, slider.lineColor);
-            renderPoint(p1.add((p2.sub(p1)).mult((double) slider.value)), 10, slider.pointColor);
-            slider.doSlider(Run.controller.mousePos, pos, p1, p2);
+            Vec p1 = pos.add(size.mult(new Vec(0.05,0.5)));
+            Vec p2 = pos.add(size.mult(new Vec(0.95, 0.5)));
+            renderLine(p1, p2, 5, slider.lineColor);
+            Vec pointPos = p1.add((p2.sub(p1)).mult((slider.value - slider.Lbound) / (slider.Rbound - slider.Lbound)));
+            renderPoint(pointPos, 20, slider.pointColor);
+            slider.doSlider(Controller.mousePos, pointPos, p1, p2);
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -161,11 +171,19 @@ public class GUI {
         pointShader.setUniform("color", color);
         pointShader.setUniform("pointPosition", localPos);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glPointSize(10);
+        glPointSize(size);
         glDrawArrays(GL_POINTS, 0, 1);
     }
     private static void renderLine(Vec localPos1, Vec localPos2, float width, Vec color) {
-        // To be implemented
+        glBindVertexArray(VAO);
+        lineShader.setUniform("color", color);
+        lineShader.setUniform("p1", localPos1);
+        lineShader.setUniform("p2", localPos2);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glLineWidth(width);
+        glDrawArrays(GL_LINES, 0, 2);
+        renderPoint(localPos1, width, color);
+        renderPoint(localPos2, width, color);
     }
 
     public static class GUIObject {
@@ -208,6 +226,7 @@ public class GUI {
         GUIQuad quad;
         Runnable action;
         boolean hovered;
+        int ID;
 
         public GUIButton(Vec position, Vec size, GUILabel label, GUIQuad quad, Runnable action) {
             this.position = position;
@@ -215,6 +234,7 @@ public class GUI {
             this.label = label;
             this.quad = quad;
             this.action = action;
+            ID = interactables++;
         }
 
         public void doButton(Vec mousePos, Vec buttonMin, Vec buttonMax) {
@@ -226,7 +246,7 @@ public class GUI {
             if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
                 if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
                     hovered = true;
-                    if (glfwGetMouseButton(Run.window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) action.run();
+                    if (mouseInteractingWith == -1 && Controller.LMBdown) action.run();
                 }
             }
         }
@@ -254,11 +274,13 @@ public class GUI {
         GUIQuad quad;
         float Lbound;
         float Rbound; 
-        float value = 0;
+        public float value;
         Vec lineColor;
         Vec pointColor;
+        private boolean held = false;
+        int ID;
 
-        public GUISlider(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, float Rbound, Vec lineColor, Vec pointColor) {
+        public GUISlider(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, float Rbound, Vec lineColor, Vec pointColor, float startValue) {
             this.position = position;
             this.size = size;
             this.label = label;
@@ -267,23 +289,38 @@ public class GUI {
             this.Rbound = Rbound;
             this.lineColor = lineColor;
             this.pointColor = pointColor;
+            this.value = startValue;
+            ID = interactables++;
         }
 
         public void doSlider(Vec mousePos, Vec pointPos, Vec p1, Vec p2) {
             // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
-            float screenSpaceP1x = p1.x*Run.WIDTH;
-            float screenSpaceP2x = p2.x*Run.WIDTH;
+            float screenSpaceP1x = (float) (p1.x*Run.WIDTH);
+            float screenSpaceP2x = (float) (p2.x*Run.WIDTH);
             Vec screenSpacePos = new Vec(pointPos.x*Run.WIDTH, (1-pointPos.y)*Run.HEIGHT);
-            Vec screenSpaceMin = screenSpacePos.sub(new Vec(10));
-            Vec screenSpaceMax = screenSpacePos.add(new Vec(10));
+            Vec screenSpaceMin = screenSpacePos.sub(new Vec(20));
+            Vec screenSpaceMax = screenSpacePos.add(new Vec(20));
             //check if pressed
-            if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
-                if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
-                    if (glfwGetMouseButton(Run.window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
-                        float percent = (screenSpacePos.x - screenSpaceP1x) / (screenSpaceP2x - screenSpaceP1x);
-                        value = Lbound + percent*(Rbound-Lbound);
+            if (Controller.LMBdown) {
+                if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
+                    if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
+                        float percent = (float) ((mousePos.x - screenSpaceP1x) / (screenSpaceP2x - screenSpaceP1x));
+                        value = clamp(Lbound + percent*(Rbound-Lbound), Lbound, Rbound);
+                        held = true;
                     }
                 }
+                if (held) {
+                    if (mouseInteractingWith == -1 || mouseInteractingWith == ID) {
+                        mouseInteractingWith = ID;
+                        float percent = (float) ((mousePos.x - screenSpaceP1x) / (screenSpaceP2x - screenSpaceP1x));
+                        value = clamp(Lbound + percent * (Rbound - Lbound), Lbound, Rbound);
+                    }
+                } else {
+                    held = false;
+                    if (mouseInteractingWith == ID) mouseInteractingWith = -1;
+                }
+            } else {
+                held = false;
             }
         }
     }

@@ -23,7 +23,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 import org.lwjgl.system.MemoryUtil;
 
-import static Main.Run.lerp;
+import static Util.MathUtil.*;
 import static org.lwjgl.opengl.ARBBindlessTexture.*;
 import static org.lwjgl.opengl.ARBUniformBufferObject.glBindBufferBase;
 import static org.lwjgl.opengl.GL20.*;

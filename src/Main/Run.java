@@ -20,6 +20,7 @@ import org.joml.Vector3f;
 import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
+import static Util.MathUtil.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.ARBFramebufferSRGB.GL_FRAMEBUFFER_SRGB;
 import static org.lwjgl.opengl.GL20.*;
@@ -82,15 +83,59 @@ public class Run {
         init();
         gui = new GUI();
         compileShaders();
+        controller = new Controller(camPos, camRot, window);
         runEngine();
         updateSave();
+
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
         //Util.PBRtextureSeparator.processMaterialFile("C:/Graphics/assets/bistro2/bistro.mtl");
     }
+    private static void test() {
+        long frameTime = 1000000000 / FPS; // Nanoseconds per frame
+        System.out.println("Initiation complete");
+        int frames = 0;
+        long lastTime = System.nanoTime();
+
+        while (!glfwWindowShouldClose(window)) {
+            long startTime = System.nanoTime();
+
+            glfwPollEvents();
+            checkWindowSize();
+            controller.doControls(time);
+            if (doRescale) {scaleToWindow(); doRescale = false;}
+            update();
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_DEPTH_TEST);
+            glViewport(0, 0, WIDTH, HEIGHT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            ((GUI.GUILabel) GUI.objects.get(0).children.get(0).elements.get(1))
+                    .setText("FPS: " + (int)currFPS);
+            ((GUI.GUILabel) GUI.objects.get(0).children.get(1).elements.get(1))
+                    .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
+            if (Controller.escaped) GUI.renderGUI();
+            glfwSwapBuffers(window);
+
+            frames++;
+            double thisFrameTime = (startTime - lastTime) / 1_000_000_000.0;
+            if (thisFrameTime >= 0.5) {
+                currFPS = (float) (frames / thisFrameTime);
+                updateLine(0, "FPS: " + currFPS);
+                frames = 0;
+                lastTime = startTime;
+            }
+            long elapsedTime = System.nanoTime() - startTime;
+            long sleepTime = frameTime - elapsedTime;
+            if (sleepTime > 0 && CAP_FPS) {
+                try {
+                    Thread.sleep(sleepTime / 1000000, (int) (sleepTime % 1000000)); // Convert to milliseconds & nanoseconds
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        glfwTerminate();
+    }
     public static void runEngine() {
-        gui = new GUI();
-        controller = new Controller(camPos, camRot, window);
-        //controller = new Controller(new Vec(11.05, 2.71, 2.47), new Vec(0.06, -1.6, 0), window);
         world = new World();
         createWorld();
         world.updateWorld();
@@ -110,7 +155,6 @@ public class Run {
             double thisFrameTime = (startTime - lastTime) / 1_000_000_000.0;
             if (thisFrameTime >= 0.5) {
                 currFPS = (float) (frames / thisFrameTime);
-                updateLine(0, "FPS: " + currFPS);
                 frames = 0;
                 lastTime = startTime;
             }
@@ -141,7 +185,10 @@ public class Run {
                 .setText("FPS: " + (int)currFPS);
         ((GUI.GUILabel) GUI.objects.get(0).children.get(1).elements.get(1))
                 .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
+        ((GUI.GUISlider) GUI.objects.get(0).elements.get(5)).label
+                .setText("Exposure: " + EXPOSURE);
         if (Controller.escaped) GUI.renderGUI();
+        EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).elements.get(5)).value;
 
         glfwSwapBuffers(window);
     }
@@ -293,12 +340,6 @@ public class Run {
         SSAOshader.setUniform("height", HEIGHT);
         SSAOshader.setUniform("radius", SSAOradius);
         SSAOshader.setUniform("bias", SSAObias);
-
-        updateLine(1, "Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
-        updateLine(2, "Rotation: " + String.format("%.2f %.2f %.2f", controller.cameraRot.x, controller.cameraRot.y, controller.cameraRot.z));
-        updateLine(3, "Exposure: " + EXPOSURE);
-        updateLine(4, "Gamma: " + GAMMA);
-        updateLine(5, "SSAO radius: " + SSAOradius);
     }
 
     public static void init() {
@@ -339,6 +380,7 @@ public class Run {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(400, 400);
 
+        /*
         textArea = new JTextArea(5, 30);
         textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         textArea.setEditable(false);
@@ -352,6 +394,7 @@ public class Run {
         print("");
         print("");
         print("");
+         */
     }
     public static void compileShaders() {
         skyboxShader = new Shader(shaderPath + "\\skyboxShader\\skyboxFrag.glsl", shaderPath + "\\quadVertex.glsl");
@@ -367,6 +410,7 @@ public class Run {
         GUI.textRenderer.shaderProgram = new Shader("src\\shaders\\text_shader\\text_shader.frag", "src\\shaders\\text_shader\\text_shader.vert");
         GUI.backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
         GUI.pointShader = new Shader("src\\shaders\\pointShader\\pointShader.frag", "src\\shaders\\pointShader\\pointShader.vert");
+        GUI.lineShader = new Shader("src\\shaders\\lineShader\\line.frag", "src\\shaders\\lineShader\\line.vert");
     }
     static void checkWindowSize() {
         IntBuffer width = MemoryUtil.memAllocInt(1);
@@ -546,6 +590,10 @@ public class Run {
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, (i == 0) ? gaussianBlurTexOneHalf : gaussianBlurTex, 0);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    public static void Quit() {
+        glfwSetWindowShouldClose(window, true);
     }
 
     private static void gaussianBlur(int texture) {
@@ -826,10 +874,6 @@ public class Run {
                 e.printStackTrace();
             }
         }
-    }
-
-    public static double lerp(double t, double a, double b) {
-        return a + t * ((double) b - a);
     }
 
     public static void print(String text) {

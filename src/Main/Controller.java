@@ -29,6 +29,7 @@ public class Controller {
     long window;
 
     boolean mouseMode = true;
+    static boolean LMBdown = false;
     static boolean escaped = true;
     boolean firstMouse = true;
     boolean escapeWasDown = false; boolean minusWasDown = false; boolean equalsWasDown = false; boolean f1WasDown = false; boolean f2WasDown = false; boolean f3WasDown = false; boolean f4WasDown = false; boolean f11WasDown = false;
@@ -51,6 +52,8 @@ public class Controller {
         lastTime = time;
 
         float speed = moveSpeed * (float) deltaTime;
+
+        LMBdown = glfwGetMouseButton(Run.window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             if (!escapeWasDown) {

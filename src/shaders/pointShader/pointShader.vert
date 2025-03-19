@@ -1,7 +1,8 @@
 #version 460
 
-uniform vec2 pointPosition;
+uniform vec3 pointPosition;
 
 void main() {
-    gl_Position = vec4(pointPosition*2 - 1, 0.0, 1.0);
+    vec2 pos = pointPosition.xy*2 - 1;
+    gl_Position = vec4(pos, 0.0, 1.0);
 }
