@@ -32,7 +32,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
 - Simple PBR shading (currently no IBL)
 - Orthographic shadow mapping
-- Fullscreen option and ability to rescale window (hot recreating textures and framebuffers)
+- Fullscreen option and ability to rescale window (reinitializing textures and framebuffers during runtime)
 - Text rendering
 - Custom heirarchal GUI system
   - Sliders
@@ -57,6 +57,7 @@ Include lwjgl, lwjgl-opengl, lwjgl-stb, lwjgl-glfw, dds-lwjgl-3.0.0, joml, json
 
 Replace paths to skybox and objects with paths to objects on your computer
 - WASD to move, space and left shift for vertical movement
+- Escape to toggle settings GUI and mouse control
 - F1 to recompile shaders
 - F2 to screenshot
 - F3 to toggle SSAO
