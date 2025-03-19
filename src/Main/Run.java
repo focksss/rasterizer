@@ -85,6 +85,7 @@ public class Run {
         compileShaders();
         controller = new Controller(camPos, camRot, window);
         runEngine();
+        //test();
         updateSave();
 
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
@@ -112,7 +113,10 @@ public class Run {
                     .setText("FPS: " + (int)currFPS);
             ((GUI.GUILabel) GUI.objects.get(0).children.get(1).elements.get(1))
                     .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
+            ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).label
+                    .setText("Exposure: " + EXPOSURE);
             if (Controller.escaped) GUI.renderGUI();
+            EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).value;
             glfwSwapBuffers(window);
 
             frames++;
@@ -185,10 +189,10 @@ public class Run {
                 .setText("FPS: " + (int)currFPS);
         ((GUI.GUILabel) GUI.objects.get(0).children.get(1).elements.get(1))
                 .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
-        ((GUI.GUISlider) GUI.objects.get(0).elements.get(5)).label
+        ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).label
                 .setText("Exposure: " + EXPOSURE);
         if (Controller.escaped) GUI.renderGUI();
-        EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).elements.get(5)).value;
+        EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).value;
 
         glfwSwapBuffers(window);
     }

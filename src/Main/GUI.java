@@ -77,10 +77,11 @@ public class GUI {
         GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
         GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1));
         GUIObject subObject1 = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1));
-        //fps pos
+
+        GUILabel label0 = new GUILabel(new Vec(), "", 0f, new Vec());
         GUILabel label1 = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
         GUILabel label5 = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
-        //
+
         GUILabel label2 = new GUILabel(new Vec(0.1, 0.9), "Settings", 2, new Vec(1));
         GUILabel label3 = new GUILabel(new Vec(0.1, 0.4), "Recompile Shaders", 1, new Vec(1));
         GUILabel label4 = new GUILabel(new Vec(0.1, 0.4), "Take Screenshot", 1, new Vec(1));
@@ -91,8 +92,10 @@ public class GUI {
         GUIButton button2 = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), label4, quad2, Controller::screenshot);
         GUIButton button3 = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), label7, quad3, Run::Quit);
         GUISlider slider1 = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), label6, quad2, 0, 10, new Vec(1), new Vec(1), Run.EXPOSURE);
+        GUIButton button4 = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), label0, quad2, mainObject::toMouse);
 
         mainObject.addElement(quad1);
+        mainObject.addElement(button4);
         mainObject.addElement(label2);
         mainObject.addElement(button1);
         mainObject.addElement(button2);
@@ -202,6 +205,22 @@ public class GUI {
         public void addElement(Object element) {
             elements.add(element);
         }
+        public void toMouse() {
+            new Thread(() -> {
+                Vec firstMousePos = new Vec(Controller.mousePos.x, Controller.mousePos.y);
+                Vec originalPos = new Vec(position);
+                while (Controller.LMBdown) {
+                    Vec offset = ((Controller.mousePos.sub(firstMousePos))).div(new Vec(Run.WIDTH, Run.HEIGHT));
+                    position = originalPos.add(new Vec(offset.x, -offset.y));
+
+                    try {
+                        Thread.sleep((1/Run.FPS) * 1000); // Sleep for ~1 frame (assuming 60 FPS) to prevent excessive CPU usage
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
+        }
     }
     public static class GUILabel {
         Vec position;
@@ -301,13 +320,19 @@ public class GUI {
             Vec screenSpaceMin = screenSpacePos.sub(new Vec(20));
             Vec screenSpaceMax = screenSpacePos.add(new Vec(20));
             //check if pressed
+            boolean hovered = false;
+            if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
+                if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
+                    hovered = true;
+                    renderPoint(pointPos, 30, pointColor.mult(0.5));
+                    renderPoint(pointPos, 20, pointColor);
+                }
+            }
             if (Controller.LMBdown) {
-                if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
-                    if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
-                        float percent = (float) ((mousePos.x - screenSpaceP1x) / (screenSpaceP2x - screenSpaceP1x));
-                        value = clamp(Lbound + percent*(Rbound-Lbound), Lbound, Rbound);
-                        held = true;
-                    }
+                if (hovered) {
+                    float percent = (float) ((mousePos.x - screenSpaceP1x) / (screenSpaceP2x - screenSpaceP1x));
+                    value = clamp(Lbound + percent*(Rbound-Lbound), Lbound, Rbound);
+                    held = true;
                 }
                 if (held) {
                     if (mouseInteractingWith == -1 || mouseInteractingWith == ID) {
