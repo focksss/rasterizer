@@ -197,8 +197,9 @@ public class GUI {
             Vec p1 = pos.add(size.mult(new Vec(0.5,0.05)));
             Vec p2 = pos.add(size.mult(new Vec(0.5, 0.95)));
             renderLine(p1, p2, 5, scroller.lineColor);
-            Vec pointPos = p2.add((p1.sub(p2)).mult((scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound)));
-            Vec pointPos1 = p2.add((p1.sub(p2)).mult(((scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound))));
+            double loc = (scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound);
+            Vec pointPos = p2.add((p1.sub(p2)).mult(loc));
+            Vec pointPos1 = p2.add((p1.sub(p2)).mult(loc-(double)(1.0/scroller.totalGUI)));
             renderPoint(pointPos, 20, scroller.pointColor);
             scroller.doScroller(Controller.mousePos, pointPos, p2, p1);
         }
@@ -496,6 +497,7 @@ public class GUI {
             } else {
                 held = false;
             }
+            value = clamp(value, 0, 1-(clamp(clipTo.size.y / totalGUI, 0, 1)));
         }
     }
 
