@@ -21,6 +21,7 @@ public class Controller {
     Vec cameraRot;
 
     static Vec mousePos;
+    static double scrollY = 0;
     
     float moveSpeed = 1f;
     float sensitivity = 5f;
@@ -45,6 +46,11 @@ public class Controller {
         this.window = window;
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         mouseMode = false;
+
+        glfwSetScrollCallback(window, (win, offsetX, offsetY) -> {
+            scrollY += offsetY; // Accumulate scroll value
+            System.out.println("Scroll Y: " + scrollY);
+        });
     }
 
     public void doControls(long time) {

@@ -105,18 +105,9 @@ public class Run {
             controller.doControls(time);
             if (doRescale) {scaleToWindow(); doRescale = false;}
             update();
-            glDisable(GL_CULL_FACE);
-            glDisable(GL_DEPTH_TEST);
-            glViewport(0, 0, WIDTH, HEIGHT);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            ((GUI.GUILabel) GUI.objects.get(0).children.get(0).elements.get(1))
-                    .setText("FPS: " + (int)currFPS);
-            ((GUI.GUILabel) GUI.objects.get(0).children.get(1).elements.get(1))
-                    .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
-            ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).label
-                    .setText("Exposure: " + EXPOSURE);
-            if (Controller.escaped) GUI.renderGUI();
-            EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).value;
+            doGUI();
+            //System.out.println(Controller.scrollY);
             glfwSwapBuffers(window);
 
             frames++;
@@ -183,21 +174,25 @@ public class Run {
         update();
         updateWorldObjectInstances();
         render();
-        glDisable(GL_CULL_FACE);
-
-        ((GUI.GUILabel) GUI.objects.get(0).children.get(0).elements.get(1))
-                .setText("FPS: " + (int)currFPS);
-        ((GUI.GUILabel) GUI.objects.get(0).children.get(1).elements.get(1))
-                .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
-        ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).label
-                .setText("Exposure: " + EXPOSURE);
-        ((GUI.GUISlider) GUI.objects.get(0).elements.get(7)).label
-                .setText("Gamma: " + GAMMA);
-        if (Controller.escaped) GUI.renderGUI();
-        EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).elements.get(6)).value;
-        GAMMA = ((GUI.GUISlider) GUI.objects.get(0).elements.get(7)).value;
+        doGUI();
 
         glfwSwapBuffers(window);
+    }
+    public static void doGUI() {
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        ((GUI.GUILabel) GUI.objects.get(0).children.get(1).elements.get(1))
+                .setText("FPS: " + (int) currFPS);
+        ((GUI.GUILabel) GUI.objects.get(0).children.get(2).elements.get(1))
+                .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(2)).label
+                .setText("Exposure: " + EXPOSURE);
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(3)).label
+                .setText("Gamma: " + GAMMA);
+        GUI.objects.get(0).children.get(0).position.y = ((GUI.GUIScroller) GUI.objects.get(0).elements.get(4)).value;
+        if (Controller.escaped) GUI.renderGUI();
+        EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(2)).value;
+        GAMMA = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(3)).value;
     }
 
     public static void createWorld() {
@@ -414,7 +409,7 @@ public class Run {
         SSAOshader = new Shader(shaderPath + "\\SSAOshader\\SSAOfrag.glsl", shaderPath + "\\quadVertex.glsl");
         gaussianBlurShader = new Shader(shaderPath + "\\gaussianBlurShader\\gaussianBlurFrag.glsl", shaderPath + "\\quadVertex.glsl");
         debugShader = new Shader(shaderPath + "\\debugShader\\debugShader.frag", shaderPath + "\\debugShader\\debugShader.frag");
-        GUI.textRenderer.shaderProgram = new Shader("src\\shaders\\text_shader\\text_shader.frag", "src\\shaders\\text_shader\\text_shader.vert");
+        GUI.textShader = new Shader("src\\shaders\\text_shader\\text_shader.frag", "src\\shaders\\text_shader\\text_shader.vert");
         GUI.backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
         GUI.pointShader = new Shader("src\\shaders\\pointShader\\pointShader.frag", "src\\shaders\\pointShader\\pointShader.vert");
         GUI.lineShader = new Shader("src\\shaders\\lineShader\\line.frag", "src\\shaders\\lineShader\\line.vert");

@@ -2,14 +2,12 @@ package Main;
 
 import Datatypes.Shader;
 import Datatypes.Vec;
-import ModelHandler.Obj;
 import Util.IOUtil;
 import static Util.MathUtil.*;
-import org.lwjgl.BufferUtils;
+
 import org.lwjgl.stb.STBTTAlignedQuad;
 import org.lwjgl.stb.STBTTBakedChar;
 import org.lwjgl.system.MemoryStack;
-import org.joml.Matrix4f;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +26,6 @@ import java.util.*;
 
 import static Util.IOUtil.resizeBuffer;
 import static org.lwjgl.BufferUtils.createByteBuffer;
-import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
@@ -54,7 +51,10 @@ public class GUI {
     static Shader backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
     static Shader pointShader = new Shader("src\\shaders\\pointShader\\pointShader.frag", "src\\shaders\\pointShader\\pointShader.vert");
     static Shader lineShader = new Shader("src\\shaders\\lineShader\\line.frag", "src\\shaders\\lineShader\\line.vert");
+    static Shader textShader = new Shader("src\\shaders\\text_shader\\text_shader.frag", "src\\shaders\\text_shader\\text_shader.vert");
     static int VAO;
+
+    private static Vec lastMouse;
 
     static int mouseInteractingWith = -1;
     static int interactables = 0;
@@ -74,46 +74,54 @@ public class GUI {
         GUIQuad quad2 = new GUIQuad(new Vec(0.2));
         GUIQuad quad3 = new GUIQuad(new Vec(0.8,0.2,0.2));
 
-        GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8), NULL);
-        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1), mainObject);
-        GUIObject subObject1 = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1), mainObject);
+        GUIObject clipObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8), null);
+        GUIObject settingsClip = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.6), null);
+        GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8), clipObject);
+        GUIObject settings = new GUIObject(new Vec(0,0), new Vec(1, 0.9), settingsClip);
+        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1), clipObject);
+        GUIObject subObject1 = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1), clipObject);
 
-        GUILabel label0 = new GUILabel(new Vec(), "", 0f, new Vec());
-        GUILabel label1 = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
-        GUILabel label5 = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
+        GUILabel emptyText = new GUILabel(new Vec(), "", 0f, new Vec());
+        GUILabel fpsText = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
+        GUILabel posText = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
 
-        GUILabel label2 = new GUILabel(new Vec(0.1, 0.9), "Settings", 2, new Vec(1));
-        GUILabel label3 = new GUILabel(new Vec(0.1, 0.4), "Recompile Shaders", 1, new Vec(1));
-        GUILabel label4 = new GUILabel(new Vec(0.1, 0.4), "Take Screenshot", 1, new Vec(1));
-        GUILabel label6 = new GUILabel(new Vec(0.05, 0.65), "Exposure", 0.8f, new Vec(1));
-        GUILabel label8 = new GUILabel(new Vec(0.05, 0.65), "Gamma", 0.8f, new Vec(1));
-        GUILabel label7 = new GUILabel(new Vec(0.1, 0.4), "Exit", 1f, new Vec(0));
+        GUILabel settingsText = new GUILabel(new Vec(0.1, 0.9), "Settings", 2, new Vec(1));
+        GUILabel recompileText = new GUILabel(new Vec(0.1, 0.4), "Recompile Shaders", 1, new Vec(1));
+        GUILabel screenshotText = new GUILabel(new Vec(0.1, 0.4), "Take Screenshot", 1, new Vec(1));
+        GUILabel exposureText = new GUILabel(new Vec(0.05, 0.65), "Exposure", 0.8f, new Vec(1));
+        GUILabel gammaText = new GUILabel(new Vec(0.05, 0.65), "Gamma", 0.8f, new Vec(1));
+        GUILabel exitText = new GUILabel(new Vec(0.1, 0.4), "Exit", 1f, new Vec(0));
 
-        GUIButton button1 = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), label3, quad2, Run::compileShaders);
-        GUIButton button2 = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), label4, quad2, Controller::screenshot);
-        GUIButton button3 = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), label7, quad3, Run::Quit);
-        GUISlider slider1 = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), label6, quad2, 0, 10, new Vec(1), new Vec(1), Run.EXPOSURE);
-        GUISlider slider2 = new GUISlider(new Vec(0.05, 0.25), new Vec(0.9, 0.1), label8, quad2, 0, 2, new Vec(1), new Vec(1), Run.GAMMA);
-        GUIButton button4 = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), label0, quad2, mainObject::toMouse);
+        GUIButton recompile = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), recompileText, quad2, Run::compileShaders, false);
+        GUIButton screenshot = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), screenshotText, quad2, Controller::screenshot, false);
+        GUIButton exit = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), exitText, quad3, Run::Quit, false);
+        GUISlider exposure = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), exposureText, quad2, 0, 10, new Vec(1), new Vec(1), Run.EXPOSURE);
+        GUISlider gamma = new GUISlider(new Vec(0.05, 0.25), new Vec(0.9, 0.1), gammaText, quad2, 0, 2, new Vec(1), new Vec(1), Run.GAMMA);
+        List<Runnable> moveActions = new ArrayList<>(); moveActions.add(mainObject::toMouse); moveActions.add(settingsClip::toMouse);
+        GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, moveActions, true);
+        GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.025, 0.9), emptyText, quad1, 0, 1, new Vec(1), new Vec(1), 0);
 
         mainObject.addElement(quad1);
-        mainObject.addElement(button4);
-        mainObject.addElement(label2);
-        mainObject.addElement(button1);
-        mainObject.addElement(button2);
-        mainObject.addElement(button3);
-        mainObject.addElement(slider1);
-        mainObject.addElement(slider2);
+        mainObject.addElement(moveGUI);
+        mainObject.addElement(settingsText);
+        mainObject.addElement(exit);
+        mainObject.addElement(scroll);
+        settings.addElement(recompile);
+        settings.addElement(screenshot);
+        settings.addElement(exposure);
+        settings.addElement(gamma);
 
+        mainObject.addChild(settings);
         mainObject.addChild(subObject);
         mainObject.addChild(subObject1);
 
         subObject.addElement(quad2);
-        subObject.addElement(label1);
+        subObject.addElement(fpsText);
         subObject1.addElement(quad2);
-        subObject1.addElement(label5);
+        subObject1.addElement(posText);
 
         objects.add(mainObject);
+        objects.add(clipObject);
     }
 
     public static void renderGUI() {
@@ -121,26 +129,19 @@ public class GUI {
         for (GUIObject object : objects) {
             renderObject(object, new Vec(0), new Vec(1));
         }
+        lastMouse = Controller.mousePos;
     }
     private static void renderObject(GUIObject object, Vec parentPosition, Vec parentScale) {
         Vec localPos = parentPosition.add(parentScale.mult(object.position));
         Vec localSize = parentScale.mult(object.size);
-        if (object.clipTo != NULL) {
-            Vec clipMin = object.clipTo.position.mult(2).sub(1);
-            Vec clipMax = (object.clipTo.position.add(clipTo.size)).mult(2).sub(1);
-            pointShader.setUniform("clipMin", clipMin);
-            pointShader.setUniform("clipMax", clipMax);
-            lineShader.setUniform("clipMin", clipMin);
-            lineShader.setUniform("clipMax", clipMax);
-            backgroundShader.setUniform("clipMin", clipMin);
-            backgroundShader.setUniform("clipMax", clipMax);
+        if (object.clipTo != null) {
+            Vec clipMin = object.clipTo.position.mult(new Vec(Run.WIDTH, Run.HEIGHT));
+            Vec clipMax = (object.clipTo.position.add(object.clipTo.size)).mult(new Vec(Run.WIDTH, Run.HEIGHT));
+            setClipBounds(clipMin, clipMax);
         } else {
-            pointShader.setUniform("clipMin", new Vec(-1));
-            pointShader.setUniform("clipMax", new Vec(1));
-            lineShader.setUniform("clipMin", new Vec(-1));
-            lineShader.setUniform("clipMax", new Vec(1));
-            backgroundShader.setUniform("clipMin", new Vec(-1));
-            backgroundShader.setUniform("clipMax", new Vec(1));
+            Vec clipMin = new Vec(0);
+            Vec clipMax = new Vec(Run.WIDTH, Run.HEIGHT);
+            setClipBounds(clipMin, clipMax);
         }
         for (Object element : object.elements) {
             renderElement(element, localPos, localSize);
@@ -149,6 +150,17 @@ public class GUI {
             renderObject(child, localPos, localSize);
         }
     }
+    private static void setClipBounds(Vec clipMin, Vec clipMax) {
+        pointShader.setUniform("clipMin", clipMin);
+        pointShader.setUniform("clipMax", clipMax);
+        lineShader.setUniform("clipMin", clipMin);
+        lineShader.setUniform("clipMax", clipMax);
+        backgroundShader.setUniform("clipMin", clipMin);
+        backgroundShader.setUniform("clipMax", clipMax);
+        textShader.setUniform("clipMin", clipMin);
+        textShader.setUniform("clipMax", clipMax);
+    }
+
     private static void renderElement(Object element, Vec localPos, Vec localSize) {
         if (element instanceof GUILabel label) {
             renderLabel(label, localPos, localSize);
@@ -175,6 +187,18 @@ public class GUI {
             Vec pointPos = p1.add((p2.sub(p1)).mult((slider.value - slider.Lbound) / (slider.Rbound - slider.Lbound)));
             renderPoint(pointPos, 20, slider.pointColor);
             slider.doSlider(Controller.mousePos, pointPos, p1, p2);
+        } else if (element instanceof GUIScroller) {
+            GUIScroller scroller = (GUIScroller) element;
+            Vec pos = localPos.add(localSize.mult(scroller.position));
+            Vec size = localSize.mult(scroller.size);
+            renderQuad(pos, size, scroller.quad.color);
+            renderLabel(scroller.label, pos, size);
+            Vec p1 = pos.add(size.mult(new Vec(0.5,0.05)));
+            Vec p2 = pos.add(size.mult(new Vec(0.5, 0.95)));
+            renderLine(p1, p2, 5, scroller.lineColor);
+            Vec pointPos = p2.add((p1.sub(p2)).mult((scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound)));
+            renderPoint(pointPos, 20, scroller.pointColor);
+            scroller.doScroller(Controller.mousePos, pointPos, p2, p1);
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -228,20 +252,9 @@ public class GUI {
             elements.add(element);
         }
         public void toMouse() {
-            new Thread(() -> {
-                Vec firstMousePos = new Vec(Controller.mousePos.x, Controller.mousePos.y);
-                Vec originalPos = new Vec(position);
-                while (Controller.LMBdown) {
-                    Vec offset = ((Controller.mousePos.sub(firstMousePos))).div(new Vec(Run.WIDTH, Run.HEIGHT));
-                    position = originalPos.add(new Vec(offset.x, -offset.y));
-
-                    try {
-                        Thread.sleep((1/Run.FPS) * 1000); // Sleep for ~1 frame (assuming 60 FPS) to prevent excessive CPU usage
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }).start();
+            Vec offset = ((Controller.mousePos.sub(lastMouse))).div(new Vec(Run.WIDTH, Run.HEIGHT));
+            position = position.add(new Vec(offset.x, -offset.y));
+            if (!(clipTo == null)) clipTo.position = clipTo.position.add(new Vec(offset.x, -offset.y));
         }
     }
     public static class GUILabel {
@@ -265,30 +278,74 @@ public class GUI {
         Vec size;
         GUILabel label;
         GUIQuad quad;
-        Runnable action;
+        List<Runnable> actions;
+        boolean holdable;
         boolean hovered;
+        private boolean interacted = false;
+        private boolean wasLMBdown = false;
+        private boolean mousePressedInside = false;
         int ID;
 
-        public GUIButton(Vec position, Vec size, GUILabel label, GUIQuad quad, Runnable action) {
+        public GUIButton(Vec position, Vec size, GUILabel label, GUIQuad quad, List<Runnable> actions, boolean holdable) {
             this.position = position;
             this.size = size;
             this.label = label;
             this.quad = quad;
-            this.action = action;
+            this.actions = actions;
+            this.holdable = holdable;
+            ID = interactables++;
+        }
+        public GUIButton(Vec position, Vec size, GUILabel label, GUIQuad quad, Runnable action, boolean holdable) {
+            this.position = position;
+            this.size = size;
+            this.label = label;
+            this.quad = quad;
+            this.actions = new ArrayList<>();
+            actions.add(action);
+            this.holdable = holdable;
             ID = interactables++;
         }
 
         public void doButton(Vec mousePos, Vec buttonMin, Vec buttonMax) {
             // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
-            Vec screenSpaceMin = new Vec(buttonMin.x*Run.WIDTH, (1-buttonMax.y)*Run.HEIGHT);
-            Vec screenSpaceMax = new Vec(buttonMax.x*Run.WIDTH, (1-buttonMin.y)*Run.HEIGHT);
-            //check if pressed
+            Vec screenSpaceMin = new Vec(buttonMin.x * Run.WIDTH, (1 - buttonMax.y) * Run.HEIGHT);
+            Vec screenSpaceMax = new Vec(buttonMax.x * Run.WIDTH, (1 - buttonMin.y) * Run.HEIGHT);
             hovered = false;
-            if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
-                if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
-                    hovered = true;
-                    if (mouseInteractingWith == -1 && Controller.LMBdown) action.run();
+            boolean insideButton = (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x &&
+                    mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y);
+            if (insideButton) {
+                hovered = true;
+                if (Controller.LMBdown && !wasLMBdown) {
+                    mousePressedInside = true;
                 }
+                if (Controller.LMBdown && mousePressedInside) {
+                    if (!holdable) {
+                        if (mouseInteractingWith == -1 && !interacted) {
+                            runAllActions();
+                            interacted = true;
+                        }
+                    } else {
+                        if (mouseInteractingWith == -1 || mouseInteractingWith == ID) {
+                            mouseInteractingWith = ID;
+                            if (!interacted) {
+                                lastMouse = new Vec(Controller.mousePos.x, Controller.mousePos.y);
+                            }
+                            interacted = true;
+                            runAllActions();
+                        }
+                    }
+                }
+            }
+            if (!Controller.LMBdown) {
+                interacted = false;
+                mousePressedInside = false;
+                if (mouseInteractingWith == ID) mouseInteractingWith = -1;
+            }
+            wasLMBdown = Controller.LMBdown;
+        }
+        private void runAllActions() {
+            for (Runnable action : actions) {
+                action.run();
             }
         }
     }
@@ -351,7 +408,7 @@ public class GUI {
                 }
             }
             if (Controller.LMBdown) {
-                if (hovered) {
+                if (hovered && mouseInteractingWith == -1) {
                     float percent = (float) ((mousePos.x - screenSpaceP1x) / (screenSpaceP2x - screenSpaceP1x));
                     value = clamp(Lbound + percent*(Rbound-Lbound), Lbound, Rbound);
                     held = true;
@@ -361,6 +418,69 @@ public class GUI {
                         mouseInteractingWith = ID;
                         float percent = (float) ((mousePos.x - screenSpaceP1x) / (screenSpaceP2x - screenSpaceP1x));
                         value = clamp(Lbound + percent * (Rbound - Lbound), Lbound, Rbound);
+                    }
+                } else {
+                    held = false;
+                    if (mouseInteractingWith == ID) mouseInteractingWith = -1;
+                }
+            } else {
+                held = false;
+            }
+        }
+    }
+    public class GUIScroller {
+        Vec position;
+        Vec size;
+        GUILabel label;
+        GUIQuad quad;
+        float Lbound;
+        float Rbound;
+        public float value;
+        Vec lineColor;
+        Vec pointColor;
+        private boolean held = false;
+        int ID;
+
+        public GUIScroller(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, float Rbound, Vec lineColor, Vec pointColor, float startValue) {
+            this.position = position;
+            this.size = size;
+            this.label = label;
+            this.quad = quad;
+            this.Lbound = Lbound;
+            this.Rbound = Rbound;
+            this.lineColor = lineColor;
+            this.pointColor = pointColor;
+            this.value = startValue;
+            ID = interactables++;
+        }
+
+        public void doScroller(Vec mousePos, Vec pointPos, Vec p1, Vec p2) {
+            // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
+            float screenSpaceP1y = (float) (p1.y*Run.HEIGHT);
+            float screenSpaceP2y = (float) (p2.y*Run.HEIGHT);
+            Vec screenSpacePos = new Vec(pointPos.x*Run.WIDTH, (1-pointPos.y)*Run.HEIGHT);
+            Vec screenSpaceMin = screenSpacePos.sub(new Vec(20));
+            Vec screenSpaceMax = screenSpacePos.add(new Vec(20));
+            //check if pressed
+            boolean hovered = false;
+            if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
+                if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
+                    hovered = true;
+                    renderPoint(pointPos, 30, pointColor.mult(0.5));
+                    renderPoint(pointPos, 20, pointColor);
+                }
+            }
+            if (Controller.LMBdown) {
+                if (hovered && mouseInteractingWith == -1) {
+                    float percent = (float) ((Run.HEIGHT - mousePos.y - screenSpaceP1y) / (screenSpaceP2y - screenSpaceP1y));
+                    value = clamp(Lbound + percent*(Rbound-Lbound), Lbound, Rbound);
+                    held = true;
+                }
+                if (held) {
+                    if (mouseInteractingWith == -1 || mouseInteractingWith == ID) {
+                        mouseInteractingWith = ID;
+                        float percent = (float) ((Run.HEIGHT - mousePos.y - screenSpaceP1y) / (screenSpaceP2y - screenSpaceP1y));
+                        value = clamp(Lbound + percent*(Rbound-Lbound), Lbound, Rbound);
                     }
                 } else {
                     held = false;
@@ -381,7 +501,6 @@ public class GUI {
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
     public static class TextRenderer {
-        Shader shaderProgram;
         private int VAO, VBO;
         public static int fontTexture;
         private STBTTBakedChar.Buffer charData;
@@ -390,7 +509,6 @@ public class GUI {
 
         public TextRenderer(String fontPath) {
             // Compile and link the shader program
-            shaderProgram = new Shader("src\\shaders\\text_shader\\text_shader.frag", "src\\shaders\\text_shader\\text_shader.vert");
 
             // Create VAO and VBO for text rendering
             VAO = glGenVertexArrays();
@@ -418,13 +536,13 @@ public class GUI {
 
         public void renderText(String text, float x, float y, float scale, Vec color) {
             //x and y are screen percent where 0 0 is center, 0.5 0.5 bring right top bound, - is left bottom bound
-            shaderProgram.useProgram();
-            shaderProgram.setUniform("textTexture", 0);
-            shaderProgram.setUniform("textTexture", 0);
-            shaderProgram.setUniform("width", Run.WIDTH);
-            shaderProgram.setUniform("height", Run.HEIGHT);
-            shaderProgram.setUniform("textColor", color);
-            shaderProgram.setUniform("pos", new Vec(x,y));
+            textShader.useProgram();
+            textShader.setUniform("textTexture", 0);
+            textShader.setUniform("textTexture", 0);
+            textShader.setUniform("width", Run.WIDTH);
+            textShader.setUniform("height", Run.HEIGHT);
+            textShader.setUniform("textColor", color);
+            textShader.setUniform("pos", new Vec(x,y));
 
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, fontTexture);
