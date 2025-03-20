@@ -99,7 +99,8 @@ public class GUI {
         GUISlider gamma = new GUISlider(new Vec(0.05, 0.25), new Vec(0.9, 0.1), gammaText, quad2, 0, 2, new Vec(1), new Vec(1), Run.GAMMA);
         List<Runnable> moveActions = new ArrayList<>(); moveActions.add(mainObject::toMouse); moveActions.add(settingsClip::toMouse);
         GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, moveActions, true);
-        GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.025, 0.9), emptyText, quad1, 0, 1, new Vec(1), new Vec(1), 0);
+        GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.025, 0.9), emptyText, quad1, 0, 1, new Vec(0.1), new Vec(0.2), 0);
+        scroll.setTotalGUI(0.8f - 0.25f); // top button h - bottom button h
 
         mainObject.addElement(quad1);
         mainObject.addElement(moveGUI);
@@ -197,7 +198,7 @@ public class GUI {
             Vec p2 = pos.add(size.mult(new Vec(0.5, 0.95)));
             renderLine(p1, p2, 5, scroller.lineColor);
             Vec pointPos = p2.add((p1.sub(p2)).mult((scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound)));
-            Vec pointPos1 = p2.add((p1.sub(p2)).mult((scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound)));
+            Vec pointPos1 = p2.add((p1.sub(p2)).mult(((scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound))));
             renderPoint(pointPos, 20, scroller.pointColor);
             scroller.doScroller(Controller.mousePos, pointPos, p2, p1);
         }
@@ -455,6 +456,9 @@ public class GUI {
             this.pointColor = pointColor;
             this.value = startValue;
             ID = interactables++;
+        }
+        void setTotalGUI(float totalGUI) {
+            this.totalGUI = totalGUI;
         }
 
         public void doScroller(Vec mousePos, Vec pointPos, Vec p1, Vec p2) {
