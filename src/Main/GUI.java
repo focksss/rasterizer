@@ -92,14 +92,15 @@ public class GUI {
         GUILabel gammaText = new GUILabel(new Vec(0.05, 0.65), "Gamma", 0.8f, new Vec(1));
         GUILabel exitText = new GUILabel(new Vec(0.1, 0.4), "Exit", 1f, new Vec(0));
 
-        GUIButton recompile = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), recompileText, quad2, Run::compileShaders, false);
-        GUIButton screenshot = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), screenshotText, quad2, Controller::screenshot, false);
-        GUIButton exit = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), exitText, quad3, Run::Quit, false);
+        GUIButton recompile = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), recompileText, quad2, Run::compileShaders, false, false);
+        GUIButton screenshot = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), screenshotText, quad2, Controller::screenshot, false, false);
+        GUIButton exit = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), exitText, quad3, Run::Quit, false, false);
         GUISlider exposure = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), exposureText, quad2, 0, 10, new Vec(1), new Vec(1), Run.EXPOSURE);
         GUISlider gamma = new GUISlider(new Vec(0.05, 0.25), new Vec(0.9, 0.1), gammaText, quad2, 0, 2, new Vec(1), new Vec(1), Run.GAMMA);
         List<Runnable> moveActions = new ArrayList<>(); moveActions.add(mainObject::toMouse); moveActions.add(settingsClip::toMouse);
-        GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, moveActions, true);
-        GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.025, 0.9), emptyText, quad1, 0, 1, new Vec(1), new Vec(1), 0);
+        GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, moveActions, true, true);
+        GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.025, 0.9), emptyText, quad1, 0, 1, new Vec(0.1), new Vec(0.2), 0);
+        scroll.setTotalGUI(0.8f - 0.25f); // top button h - bottom button h
 
         mainObject.addElement(quad1);
         mainObject.addElement(moveGUI);
@@ -196,7 +197,9 @@ public class GUI {
             Vec p1 = pos.add(size.mult(new Vec(0.5,0.05)));
             Vec p2 = pos.add(size.mult(new Vec(0.5, 0.95)));
             renderLine(p1, p2, 5, scroller.lineColor);
-            Vec pointPos = p2.add((p1.sub(p2)).mult((scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound)));
+            double loc = (scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound);
+            Vec pointPos = p2.add((p1.sub(p2)).mult(loc));
+            Vec pointPos1 = p2.add((p1.sub(p2)).mult(loc-(double)(1.0/scroller.totalGUI)));
             renderPoint(pointPos, 20, scroller.pointColor);
             scroller.doScroller(Controller.mousePos, pointPos, p2, p1);
         }
@@ -281,21 +284,23 @@ public class GUI {
         List<Runnable> actions;
         boolean holdable;
         boolean hovered;
+        boolean draggable;
         private boolean interacted = false;
         private boolean wasLMBdown = false;
         private boolean mousePressedInside = false;
         int ID;
 
-        public GUIButton(Vec position, Vec size, GUILabel label, GUIQuad quad, List<Runnable> actions, boolean holdable) {
+        public GUIButton(Vec position, Vec size, GUILabel label, GUIQuad quad, List<Runnable> actions, boolean holdable, boolean draggable) {
             this.position = position;
             this.size = size;
             this.label = label;
             this.quad = quad;
             this.actions = actions;
             this.holdable = holdable;
+            this.draggable = draggable;
             ID = interactables++;
         }
-        public GUIButton(Vec position, Vec size, GUILabel label, GUIQuad quad, Runnable action, boolean holdable) {
+        public GUIButton(Vec position, Vec size, GUILabel label, GUIQuad quad, Runnable action, boolean holdable, boolean draggable) {
             this.position = position;
             this.size = size;
             this.label = label;
@@ -303,6 +308,7 @@ public class GUI {
             this.actions = new ArrayList<>();
             actions.add(action);
             this.holdable = holdable;
+            this.draggable = draggable;
             ID = interactables++;
         }
 
@@ -335,6 +341,8 @@ public class GUI {
                         }
                     }
                 }
+            } else if (mouseInteractingWith == ID && Controller.LMBdown && draggable) {
+                runAllActions();
             }
             if (!Controller.LMBdown) {
                 interacted = false;
@@ -438,6 +446,8 @@ public class GUI {
         public float value;
         Vec lineColor;
         Vec pointColor;
+        float totalGUI;
+        //subline should be length visibleGUI(1)/totalGUI 
         private boolean held = false;
         int ID;
 
@@ -452,6 +462,9 @@ public class GUI {
             this.pointColor = pointColor;
             this.value = startValue;
             ID = interactables++;
+        }
+        void setTotalGUI(float totalGUI) {
+            this.totalGUI = totalGUI;
         }
 
         public void doScroller(Vec mousePos, Vec pointPos, Vec p1, Vec p2) {
@@ -489,6 +502,7 @@ public class GUI {
             } else {
                 held = false;
             }
+            value = clamp(value, 0, 1-(clamp(clipTo.size.y / totalGUI, 0, 1)));
         }
     }
 
