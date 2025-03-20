@@ -197,6 +197,7 @@ public class GUI {
             Vec p2 = pos.add(size.mult(new Vec(0.5, 0.95)));
             renderLine(p1, p2, 5, scroller.lineColor);
             Vec pointPos = p2.add((p1.sub(p2)).mult((scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound)));
+            Vec pointPos1 = p2.add((p1.sub(p2)).mult((scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound)));
             renderPoint(pointPos, 20, scroller.pointColor);
             scroller.doScroller(Controller.mousePos, pointPos, p2, p1);
         }
@@ -438,6 +439,8 @@ public class GUI {
         public float value;
         Vec lineColor;
         Vec pointColor;
+        float totalGUI;
+        //subline should be length visibleGUI(1)/totalGUI 
         private boolean held = false;
         int ID;
 
