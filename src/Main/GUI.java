@@ -3,6 +3,8 @@ package Main;
 import Datatypes.Shader;
 import Datatypes.Vec;
 import Util.IOUtil;
+
+import static Main.Controller.mousePos;
 import static Util.MathUtil.*;
 
 import org.lwjgl.stb.STBTTAlignedQuad;
@@ -71,11 +73,13 @@ public class GUI {
     public void toDefaultGUI() {
         objects.clear();
         GUIQuad quad1 = new GUIQuad(new Vec(0.3));
+        GUIQuad quad4 = new GUIQuad(new Vec(0.025,-10), new Vec(0.95, 20), new Vec(0.25));
         GUIQuad quad2 = new GUIQuad(new Vec(0.2));
         GUIQuad quad3 = new GUIQuad(new Vec(0.8,0.2,0.2));
 
         GUIObject clipObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8), null);
-        GUIObject settingsClip = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.6), null);
+        GUIObject settingsClip = new GUIObject(new Vec(0.1, 0.25), new Vec(0.3, 0.55), null);
+        settingsClip.size.updateFloats();
         GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8), clipObject);
         GUIObject settings = new GUIObject(new Vec(0,0), new Vec(1, 0.9), settingsClip);
         GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1), clipObject);
@@ -91,26 +95,37 @@ public class GUI {
         GUILabel exposureText = new GUILabel(new Vec(0.05, 0.65), "Exposure", 0.8f, new Vec(1));
         GUILabel gammaText = new GUILabel(new Vec(0.05, 0.65), "Gamma", 0.8f, new Vec(1));
         GUILabel exitText = new GUILabel(new Vec(0.1, 0.4), "Exit", 1f, new Vec(0));
+        GUILabel FOVtext = new GUILabel(new Vec(0.05, 0.65), "FOV: ", 0.8f, new Vec(1));
+        GUILabel SSAOrText = new GUILabel(new Vec(0.05, 0.65), "SSAO radius: ", 0.8f, new Vec(1));
+        GUILabel SSAObText = new GUILabel(new Vec(0.05, 0.65), "SSAO bias: ", 0.8f, new Vec(1));
 
-        GUIButton recompile = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), recompileText, quad2, Run::compileShaders, false, false);
-        GUIButton screenshot = new GUIButton(new Vec(0.05, 0.55), new Vec(0.9, 0.1), screenshotText, quad2, Controller::screenshot, false, false);
         GUIButton exit = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), exitText, quad3, Run::Quit, false, false);
-        GUISlider exposure = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), exposureText, quad2, 0, 10, new Vec(1), new Vec(1), Run.EXPOSURE);
-        GUISlider gamma = new GUISlider(new Vec(0.05, 0.25), new Vec(0.9, 0.1), gammaText, quad2, 0, 2, new Vec(1), new Vec(1), Run.GAMMA);
+        GUIButton recompile = new GUIButton(new Vec(0.05, 0.85), new Vec(0.9, 0.1), recompileText, quad2, Run::compileShaders, false, false);
+        GUIButton screenshot = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), screenshotText, quad2, Controller::screenshot, false, false);
+        GUISlider exposure = new GUISlider(new Vec(0.05, 0.55), new Vec(0.9, 0.1), exposureText, quad2, 0, 10, new Vec(1), new Vec(1), Run.EXPOSURE);
+        GUISlider gamma = new GUISlider(new Vec(0.05, 0.4), new Vec(0.9, 0.1), gammaText, quad2, 0, 2, new Vec(1), new Vec(1), Run.GAMMA);
+        GUISlider FOV = new GUISlider(new Vec(0.05, 0.25), new Vec(0.9, 0.1), FOVtext, quad2, 0.001f, 179.999f, new Vec(1), new Vec(1), Run.FOV);
+        GUISlider SSAOr = new GUISlider(new Vec(0.05, 0.1), new Vec(0.9, 0.1), SSAOrText, quad2, 0, 20, new Vec(1), new Vec(1), Run.SSAOradius);
+        GUISlider SSAOb = new GUISlider(new Vec(0.05, -0.05), new Vec(0.9, 0.1), SSAObText, quad2, 0, 0.1f, new Vec(1), new Vec(1), Run.SSAObias);
+        //
         List<Runnable> moveActions = new ArrayList<>(); moveActions.add(mainObject::toMouse); moveActions.add(settingsClip::toMouse);
         GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, moveActions, true, true);
-        GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.025, 0.9), emptyText, quad1, 0, 1, new Vec(0.1), new Vec(0.2), 0);
-        scroll.setTotalGUI(0.8f - 0.25f); // top button h - bottom button h
+        GUIScroller scroll = new GUIScroller(new Vec(0.975, 0.05), new Vec(0.025, 0.9), emptyText, quad1, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
+        scroll.setTotalGUI(0.85f - (-0.05f)); // top button h - bottom button h
 
         mainObject.addElement(quad1);
         mainObject.addElement(moveGUI);
         mainObject.addElement(settingsText);
         mainObject.addElement(exit);
         mainObject.addElement(scroll);
+        settings.addElement(quad4);
         settings.addElement(recompile);
         settings.addElement(screenshot);
         settings.addElement(exposure);
         settings.addElement(gamma);
+        settings.addElement(FOV);
+        settings.addElement(SSAOr);
+        settings.addElement(SSAOb);
 
         mainObject.addChild(settings);
         mainObject.addChild(subObject);
@@ -130,11 +145,12 @@ public class GUI {
         for (GUIObject object : objects) {
             renderObject(object, new Vec(0), new Vec(1));
         }
-        lastMouse = Controller.mousePos;
+        lastMouse = mousePos;
     }
     private static void renderObject(GUIObject object, Vec parentPosition, Vec parentScale) {
         Vec localPos = parentPosition.add(parentScale.mult(object.position));
         Vec localSize = parentScale.mult(object.size);
+        object.checkHover(localPos, localPos.add(localSize));
         if (object.clipTo != null) {
             Vec clipMin = object.clipTo.position.mult(new Vec(Run.WIDTH, Run.HEIGHT));
             Vec clipMax = (object.clipTo.position.add(object.clipTo.size)).mult(new Vec(Run.WIDTH, Run.HEIGHT));
@@ -173,9 +189,9 @@ public class GUI {
             Vec size = localSize.mult(button.size);
             pos.updateFloats();
             size.updateFloats();
-            renderQuad(pos, size, button.quad.color.add(new Vec(0.05).mult(button.hovered)));
+            renderQuad(pos, size, button.quad.color.mult(button.hovered ? 1.1 : 1));
             renderLabel(button.label, pos, size);
-            button.doButton(Controller.mousePos, pos, pos.add(size));
+            button.doButton(mousePos, pos, pos.add(size));
         } else if (element instanceof GUISlider) {
             GUISlider slider = (GUISlider) element;
             Vec pos = localPos.add(localSize.mult(slider.position));
@@ -187,7 +203,7 @@ public class GUI {
             renderLine(p1, p2, 5, slider.lineColor);
             Vec pointPos = p1.add((p2.sub(p1)).mult((slider.value - slider.Lbound) / (slider.Rbound - slider.Lbound)));
             renderPoint(pointPos, 20, slider.pointColor);
-            slider.doSlider(Controller.mousePos, pointPos, p1, p2);
+            slider.doSlider(mousePos, pointPos, p1, p2);
         } else if (element instanceof GUIScroller) {
             GUIScroller scroller = (GUIScroller) element;
             Vec pos = localPos.add(localSize.mult(scroller.position));
@@ -196,12 +212,13 @@ public class GUI {
             renderLabel(scroller.label, pos, size);
             Vec p1 = pos.add(size.mult(new Vec(0.5,0.05)));
             Vec p2 = pos.add(size.mult(new Vec(0.5, 0.95)));
-            renderLine(p1, p2, 5, scroller.lineColor);
-            double loc = (scroller.value - scroller.Lbound) / (scroller.Rbound - scroller.Lbound);
-            Vec pointPos = p2.add((p1.sub(p2)).mult(loc));
-            Vec pointPos1 = p2.add((p1.sub(p2)).mult(loc-(double)(1.0/scroller.totalGUI)));
-            renderPoint(pointPos, 20, scroller.pointColor);
-            scroller.doScroller(Controller.mousePos, pointPos, p2, p1);
+            renderLine(p1, p2, scroller.width, scroller.lineColor);
+            double percent = (scroller.value - scroller.Lbound) / (scroller.linked.clipTo.size.y - scroller.Lbound);
+            Vec pointPos = p2.add((p1.sub(p2)).mult(percent));
+            Vec pointPos1 = p2.add((p1.sub(p2)).mult(percent+scroller.barSize));
+            renderLine(pointPos, pointPos1, scroller.width, scroller.pointColor);
+            scroller.doScroller(mousePos, pointPos, pointPos1, p2, p1);
+            scroller.value = (float) clamp(scroller.value, scroller.Lbound, scroller.linked.clipTo.size.y);
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -242,6 +259,7 @@ public class GUI {
         List<GUIObject> children = new ArrayList<>();
         List<Object> elements = new ArrayList<>();
         GUIObject clipTo;
+        boolean hovered;
 
         public GUIObject(Vec position, Vec size, GUIObject clipTo) {
             this.position = position;
@@ -255,9 +273,15 @@ public class GUI {
             elements.add(element);
         }
         public void toMouse() {
-            Vec offset = ((Controller.mousePos.sub(lastMouse))).div(new Vec(Run.WIDTH, Run.HEIGHT));
+            Vec offset = ((mousePos.sub(lastMouse))).div(new Vec(Run.WIDTH, Run.HEIGHT));
             position = position.add(new Vec(offset.x, -offset.y));
             if (!(clipTo == null)) clipTo.position = clipTo.position.add(new Vec(offset.x, -offset.y));
+        }
+        public void checkHover(Vec min, Vec max) {
+            Vec screenSpaceMin = new Vec(min.x * Run.WIDTH, (1 - max.y) * Run.HEIGHT);
+            Vec screenSpaceMax = new Vec(max.x * Run.WIDTH, (1 - min.y) * Run.HEIGHT);
+            hovered = (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x &&
+                    mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y);
         }
     }
     public static class GUILabel {
@@ -441,68 +465,87 @@ public class GUI {
         Vec size;
         GUILabel label;
         GUIQuad quad;
+        GUIObject linked;
         float Lbound;
-        float Rbound;
         public float value;
+        float width;
         Vec lineColor;
         Vec pointColor;
         float totalGUI;
-        //subline should be length visibleGUI(1)/totalGUI 
+        //subline should be length visibleGUI(1)/totalGUI
+        float barSize;
         private boolean held = false;
+        private double initialClickHeight;
+        private boolean firstInteract = true;
+        private boolean linkedHovered = false;
+        private double scrollRawStart;
         int ID;
 
-        public GUIScroller(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, float Rbound, Vec lineColor, Vec pointColor, float startValue) {
+        public GUIScroller(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, GUIObject linked, Vec lineColor, Vec pointColor, float startValue, float width) {
             this.position = position;
             this.size = size;
             this.label = label;
             this.quad = quad;
             this.Lbound = Lbound;
-            this.Rbound = Rbound;
+            this.linked = linked;
             this.lineColor = lineColor;
             this.pointColor = pointColor;
             this.value = startValue;
+            this.width = width;
             ID = interactables++;
         }
         void setTotalGUI(float totalGUI) {
             this.totalGUI = totalGUI;
+            this.barSize = (float) (linked.clipTo.size.y / totalGUI);
         }
 
-        public void doScroller(Vec mousePos, Vec pointPos, Vec p1, Vec p2) {
+        public void doScroller(Vec mousePos, Vec pointPos, Vec pointPos1, Vec p1, Vec p2) {
             // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
-            float screenSpaceP1y = (float) (p1.y*Run.HEIGHT);
-            float screenSpaceP2y = (float) (p2.y*Run.HEIGHT);
-            Vec screenSpacePos = new Vec(pointPos.x*Run.WIDTH, (1-pointPos.y)*Run.HEIGHT);
-            Vec screenSpaceMin = screenSpacePos.sub(new Vec(20));
-            Vec screenSpaceMax = screenSpacePos.add(new Vec(20));
-            //check if pressed
-            boolean hovered = false;
-            if (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x) {
-                if (mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y) {
-                    hovered = true;
-                    renderPoint(pointPos, 30, pointColor.mult(0.5));
-                    renderPoint(pointPos, 20, pointColor);
-                }
+            float screenSpaceP1y = (float) (p1.y * Run.HEIGHT);
+            float screenSpaceP2y = (float) (p2.y * Run.HEIGHT);
+            Vec screenSpacePos = new Vec(pointPos.x * Run.WIDTH, (1 - pointPos.y) * Run.HEIGHT);
+            Vec screenSpacePos1 = new Vec(pointPos1.x * Run.WIDTH, (1 - pointPos1.y) * Run.HEIGHT);
+            Vec screenSpaceMin = screenSpacePos.sub(new Vec(width));
+            Vec screenSpaceMax = screenSpacePos1.add(new Vec(width));
+
+            boolean hovered = mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x &&
+                    mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y;
+            if (hovered) {
+                renderLine(pointPos, pointPos1, width, pointColor.mult(1.1));
             }
             if (Controller.LMBdown) {
                 if (hovered && mouseInteractingWith == -1) {
-                    float percent = (float) ((Run.HEIGHT - mousePos.y - screenSpaceP1y) / (screenSpaceP2y - screenSpaceP1y));
-                    value = clamp(Lbound + percent*(Rbound-Lbound), Lbound, Rbound);
                     held = true;
                 }
-                if (held) {
-                    if (mouseInteractingWith == -1 || mouseInteractingWith == ID) {
-                        mouseInteractingWith = ID;
-                        float percent = (float) ((Run.HEIGHT - mousePos.y - screenSpaceP1y) / (screenSpaceP2y - screenSpaceP1y));
-                        value = clamp(Lbound + percent*(Rbound-Lbound), Lbound, Rbound);
+                if (held && (mouseInteractingWith == -1 || mouseInteractingWith == ID)) {
+                    float percent = (float) ((Run.HEIGHT - mousePos.y - screenSpaceP1y) / (screenSpaceP2y - screenSpaceP1y));
+                    if (firstInteract) {
+                        firstInteract = false;
+                        initialClickHeight = percent - ((Run.HEIGHT - screenSpacePos.y - screenSpaceP1y) / (screenSpaceP2y - screenSpaceP1y));
                     }
-                } else {
-                    held = false;
-                    if (mouseInteractingWith == ID) mouseInteractingWith = -1;
+                    percent -= initialClickHeight;
+                    mouseInteractingWith = ID;
+                    value = (float) clamp(Lbound + percent * (linked.clipTo.size.y - Lbound), Lbound, linked.clipTo.size.y);
                 }
             } else {
                 held = false;
+                firstInteract = true;
+                if (mouseInteractingWith == ID) {
+                    mouseInteractingWith = -1;
+                }
             }
-            value = clamp(value, 0, 1-(clamp(clipTo.size.y / totalGUI, 0, 1)));
+            if (linked.hovered) {
+                if (!linkedHovered) {
+                    scrollRawStart = Controller.scrollY;
+                }
+                linkedHovered = true;
+                float scrollDelta = (float) ((Controller.scrollY - scrollRawStart) * 0.1f);
+                value += scrollDelta;
+                scrollRawStart = Controller.scrollY;
+            } else {
+                linkedHovered = false;
+            }
+            value = (float) clamp(value, 0, linked.clipTo.size.y * (1 - barSize));
         }
     }
 

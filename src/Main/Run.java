@@ -37,10 +37,12 @@ public class Run {
             lightingFBO, lightingTex, lightingRBO,
             gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
+            bloomFBO,
             postProcessingFBO, postProcessingTex, bloomTex,
             skyboxTex,
             gaussianBlurTexOneHalf, gaussianBlurTex;
     private static int[] gaussianBlurFBO;
+    private static int[] bloomMipTextures;
     private static Vec[] SSAOkernal;
     public static Shader
             geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader, upsampleShader, downsampleShader;
@@ -185,14 +187,23 @@ public class Run {
                 .setText("FPS: " + (int) currFPS);
         ((GUI.GUILabel) GUI.objects.get(0).children.get(2).elements.get(1))
                 .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
-        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(2)).label
-                .setText("Exposure: " + EXPOSURE);
         ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(3)).label
+                .setText("Exposure: " + EXPOSURE);
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(4)).label
                 .setText("Gamma: " + GAMMA);
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(5)).label
+                .setText("FOV: " + FOV);
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(6)).label
+                .setText("SSAO radius: " + SSAOradius);
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(7)).label
+                .setText("SSAO bias: " + SSAObias);
         GUI.objects.get(0).children.get(0).position.y = ((GUI.GUIScroller) GUI.objects.get(0).elements.get(4)).value;
         if (Controller.escaped) GUI.renderGUI();
-        EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(2)).value;
-        GAMMA = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(3)).value;
+        EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(3)).value;
+        GAMMA = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(4)).value;
+        FOV = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(5)).value;
+        SSAOradius = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(6)).value;
+        SSAObias = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(7)).value;
     }
 
     public static void createWorld() {
@@ -409,6 +420,8 @@ public class Run {
         SSAOshader = new Shader(shaderPath + "\\SSAOshader\\SSAOfrag.glsl", shaderPath + "\\quadVertex.glsl");
         gaussianBlurShader = new Shader(shaderPath + "\\gaussianBlurShader\\gaussianBlurFrag.glsl", shaderPath + "\\quadVertex.glsl");
         debugShader = new Shader(shaderPath + "\\debugShader\\debugShader.frag", shaderPath + "\\debugShader\\debugShader.frag");
+        downsampleShader = new Shader(shaderPath + "\\up_down_sampling\\downsampleFrag.glsl", shaderPath + "\\quadVertex.glsl");
+        upsampleShader = new Shader(shaderPath + "\\up_down_sampling\\upsampleFrag.glsl", shaderPath + "\\quadVertex.glsl");
         GUI.textShader = new Shader("src\\shaders\\text_shader\\text_shader.frag", "src\\shaders\\text_shader\\text_shader.vert");
         GUI.backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
         GUI.pointShader = new Shader("src\\shaders\\pointShader\\pointShader.frag", "src\\shaders\\pointShader\\pointShader.vert");

@@ -48,8 +48,7 @@ public class Controller {
         mouseMode = false;
 
         glfwSetScrollCallback(window, (win, offsetX, offsetY) -> {
-            scrollY += offsetY; // Accumulate scroll value
-            System.out.println("Scroll Y: " + scrollY);
+            scrollY -= offsetY; // Accumulate scroll value
         });
     }
 
