@@ -37,7 +37,7 @@ public class Run {
             lightingFBO, lightingTex, lightingRBO,
             gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
-            bloomFBO,
+            bloomFBO, PBbloomFBO,
             postProcessingFBO, postProcessingTex, bloomTex,
             skyboxTex,
             gaussianBlurTexOneHalf, gaussianBlurTex;
@@ -604,6 +604,23 @@ public class Run {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, (i == 0) ? gaussianBlurTexOneHalf : gaussianBlurTex, 0);
         }
+
+        PBbloomFBO = glGenFramebuffers();
+        glBindFramebuffer(GL_FRAMEBUFFER, PBbloomFBO);
+        bloomMipTextures = new int[6];
+        for (int i = 0; i < 6; i++) {
+            int resDiv = 2*i;
+            bloomMipTextures[i] = glGenTextures();
+            glBindTexture(GL_TEXTURE_2D, bloomMipTextures[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH/resDiv, HEIGHT/resDiv, 0, GL_RGB, GL_FLOAT, MemoryUtil.NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
+        int[] bloomMips = new int[6]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5};
+        glDrawBuffers(bloomMips);
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
