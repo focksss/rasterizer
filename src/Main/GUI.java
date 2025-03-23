@@ -116,7 +116,7 @@ public class GUI {
         //
         GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, main::toMouse, true, true);
         GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad4, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
-        scroll.setTotalGUI((1f - (-0.5f)) + 0f); // absTop - bottom + buffer space
+        scroll.setTotalGUI((1f - (-0.5f)) + 0.05f); // absTop - bottom + buffer space
 
         main.addElement(quad1);
         main.addElement(moveGUI);
@@ -553,7 +553,6 @@ public class GUI {
                     }
                     value = (float) (totalGUI*((moPercent - initialClickPercent)));
                     mouseInteractingWith = ID;
-                    System.out.println(moPercent + " " + initialClickPercent);
                 }
             } else {
                 held = false;

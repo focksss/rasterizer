@@ -86,8 +86,8 @@ public class Run {
         gui = new GUI();
         compileShaders();
         controller = new Controller(camPos, camRot, window);
-        //runEngine();
-        test();
+        runEngine();
+        //test();
         updateSave();
 
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
