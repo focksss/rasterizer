@@ -40,7 +40,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
   - Ability to add/edit GUI elements during runtime
 - Post processing features including:
   - HDR
-  - Bloom
+  - Physically based Bloom
   - Screen space ambient occlusion
   - Optional kernals for blur, deep-fry
  
