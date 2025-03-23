@@ -116,7 +116,7 @@ public class GUI {
         //
         GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, main::toMouse, true, true);
         GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad4, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
-        scroll.setTotalGUI((0.95f - (-0.5f)) + 0.1f); // absTop - bottom + buffer space
+        scroll.setTotalGUI((1f - (-0.5f)) + 0f); // absTop - bottom + buffer space
 
         main.addElement(quad1);
         main.addElement(moveGUI);
@@ -222,14 +222,15 @@ public class GUI {
             Vec size = localSize.mult(scroller.size);
             renderQuad(pos, size, scroller.quad.color);
             renderLabel(scroller.label, pos, size);
-            Vec p1 = pos.add(size.mult(new Vec(0.5,0.05)));
-            Vec p2 = pos.add(size.mult(new Vec(0.5, 0.95)));
-            renderLine(p1, p2, scroller.width, scroller.lineColor);
-            double percent = (scroller.value - scroller.Lbound) / (scroller.totalGUI - scroller.Lbound);
-            Vec pointPos = p2.add((p1.sub(p2)).mult(percent));
-            Vec pointPos1 = p2.add((p1.sub(p2)).mult(percent+scroller.barSize));
-            renderLine(pointPos, pointPos1, scroller.width, scroller.pointColor);
-            scroller.doScroller(mousePos, pointPos, pointPos1, p2, p1);
+            Vec l1 = pos.add(size.mult(new Vec(0.5,0.05)));
+            Vec l2 = pos.add(size.mult(new Vec(0.5, 0.95)));
+            renderLine(l1, l2, scroller.width, scroller.lineColor);
+            double percent = (scroller.value - scroller.Lbound) / ((scroller.totalGUI - scroller.Lbound));
+            Vec pointPos = l2.add((l1.sub(l2)).mult(percent));
+            Vec s1 = l2.add((l1.sub(l2)).mult((percent)*(1-scroller.barSize)));
+            Vec s2 = l2.add((l1.sub(l2)).mult((percent)*(1-scroller.barSize) + scroller.barSize));
+            renderLine(s1, s2, scroller.width, scroller.pointColor);
+            scroller.doScroller(mousePos, s1, s2, l1, l2, percent);
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -488,14 +489,13 @@ public class GUI {
         float Lbound;
         public float value;
         float width;
-        float shift;
         Vec lineColor;
         Vec pointColor;
         float totalGUI;
         //subline should be length visibleGUI(1)/totalGUI
         float barSize;
         private boolean held = false;
-        private double initialClickHeight;
+        private double initialClickPercent;
         private boolean firstInteract = true;
         private boolean linkedHovered = false;
         private double scrollRawStart;
@@ -515,38 +515,45 @@ public class GUI {
             ID = interactables++;
         }
         void setTotalGUI(float totalGUI) {
-            this.totalGUI = totalGUI;
-            this.barSize = (float) (linked.clipSize.y / totalGUI);
+            this.totalGUI = (float) (totalGUI-1);
+            this.barSize = (float) ((linked.clipSize.y/linked.size.y)/totalGUI);
         }
 
-        public void doScroller(Vec mousePos, Vec pointPos, Vec pointPos1, Vec p1, Vec p2) {
+        public void doScroller(Vec mousePos, Vec s1, Vec s2, Vec l1, Vec l2, double percent) {
             // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
-            float screenSpaceP1y = (float) (p1.y * Run.HEIGHT);
-            float screenSpaceP2y = (float) (p2.y * Run.HEIGHT);
-            Vec screenSpacePos = new Vec(pointPos.x * Run.WIDTH, (1 - pointPos.y) * Run.HEIGHT);
-            Vec screenSpacePos1 = new Vec(pointPos1.x * Run.WIDTH, (1 - pointPos1.y) * Run.HEIGHT);
-            Vec screenSpaceMin = screenSpacePos.sub(new Vec(width));
-            Vec screenSpaceMax = screenSpacePos1.add(new Vec(width));
 
+            //Map the usable scroll bar to account for the bars size
+            Vec effectiveL1 = l1.add((l2.sub(l1)).mult((barSize)));
+            float screenSpaceEffectiveL1y = (float) (effectiveL1.y * Run.HEIGHT);
+            float screenSpaceL2y = (float) (l2.y * Run.HEIGHT);
+
+            Vec screenSpaceS1 = new Vec(s1.x * Run.WIDTH, (1 - s1.y) * Run.HEIGHT);
+            Vec screenSpaceS2 = new Vec(s2.x * Run.WIDTH, (1 - s2.y) * Run.HEIGHT);
+            Vec screenSpaceMin = screenSpaceS1.sub(new Vec(width));
+            Vec screenSpaceMax = screenSpaceS2.add(new Vec(width));
+
+            //make scroll bar brighter when hovered
             boolean hovered = mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x &&
                     mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y;
             if (hovered) {
-                renderLine(pointPos, pointPos1, width, pointColor.mult(1.1));
+                renderLine(s1, s2, width, pointColor.mult(1.1));
             }
             if (Controller.LMBdown) {
+                //if was not previously interacting, and now is
                 if (hovered && mouseInteractingWith == -1) {
                     held = true;
                 }
+                //if was not previously interacting, now is, or was already interacting and still is
                 if (held && (mouseInteractingWith == -1 || mouseInteractingWith == ID)) {
-                    float percent = (float) ((Run.HEIGHT - mousePos.y - screenSpaceP1y) / (screenSpaceP2y - screenSpaceP1y));
+                    //get mouse percent relative to usable bar
+                    float moPercent = (float) ((Run.HEIGHT - mousePos.y - screenSpaceL2y) / (screenSpaceEffectiveL1y - screenSpaceL2y));
                     if (firstInteract) {
                         firstInteract = false;
-                        initialClickHeight = percent - ((Run.HEIGHT - screenSpacePos.y - screenSpaceP1y) / (screenSpaceP2y - screenSpaceP1y));
+                        initialClickPercent = moPercent - (value / totalGUI);
                     }
-                    percent -= initialClickHeight;
+                    value = (float) (totalGUI*((moPercent - initialClickPercent)));
                     mouseInteractingWith = ID;
-                    value = clamp(percent * (totalGUI), 0, totalGUI);
-//                    System.out.println(percent + " " + value);
+                    System.out.println(moPercent + " " + initialClickPercent);
                 }
             } else {
                 held = false;
@@ -566,9 +573,7 @@ public class GUI {
             } else {
                 linkedHovered = false;
             }
-            value = (float) clamp(value, 0, totalGUI * (1 - barSize));
-            shift = totalGUI*(0.65f/1.55f)*(float) (value/(linked.clipSize.y* (1 - barSize)));
-            //System.out.println(value/(linked.clipTo.size.y* (1 - barSize)));
+            value = clamp(value, 0, totalGUI);
         }
     }
 

@@ -86,8 +86,8 @@ public class Run {
         gui = new GUI();
         compileShaders();
         controller = new Controller(camPos, camRot, window);
-        runEngine();
-        //test();
+        //runEngine();
+        test();
         updateSave();
 
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
@@ -203,7 +203,8 @@ public class Run {
                 .setText("Bloom intensity: " + bloomIntensity);
         ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(10)).label
                 .setText("Bloom threshold: " + bloomThreshold);
-        GUI.objects.get(0).children.get(0).children.get(0).position.y = ((GUI.GUIScroller) GUI.objects.get(0).children.get(0).elements.get(1)).shift;
+        GUI.objects.get(0).children.get(0).children.get(0).position.y = ((GUI.GUIScroller) GUI.objects.get(0).children.get(0).elements.get(1)).value;
+        //GUI.objects.get(0).children.get(0).children.get(0).position.y = 0.25;
         //.65 gets to bottom
         //.525 to 2nd to bottom
         if (Controller.escaped) GUI.renderGUI();
