@@ -279,15 +279,15 @@ public class World {
     }
     public void addGLTF(gLTF object) {
         worldGLTFs.add(object);
-        worldMaterials.addAll(gLTF.mtllib);
+        worldMaterials.addAll(object.mtllib);
         int lastNumMats = worldMaterials.size();
-        worldMaterials.addAll(gLTF.mtllib);
-        for (String texPath : gLTF.texturePaths) {
+        worldMaterials.addAll(object.mtllib);
+        for (String texPath : object.texturePaths) {
             if(!texturePaths.contains(texPath)) {
                 texturePaths.add(texPath);
             }
         }
-        for (gLTF.Mesh mesh : gLTF.Meshes) {
+        for (gLTF.Mesh mesh : object.Meshes) {
             mesh.initialize(lastNumMats);
         }
     }
@@ -301,23 +301,25 @@ public class World {
         }
     }
     public void addLightsForScene(gLTF object, int scene, float minDist) {
-        gLTF.Scene operatingScene = gLTF.Scenes.get(scene);
+        gLTF.Scene operatingScene = object.Scenes.get(scene);
         List<Light> newLights = new ArrayList<>();
         for (gLTF.Node node : operatingScene.nodes) {
-            addLightsForNode(node, minDist, gLTF.mtllib, newLights, new Matrix4f().identity());
+            addLightsForNode(node, minDist, object.mtllib, newLights, new Matrix4f().identity());
         }
         for (Light l : newLights) {
             addLight(l);
         }
     }
     private void addLightsForNode(gLTF.Node node, float minDist, List<Material> mats, List<Light> newLights, Matrix4f parentTransform) {
-        Matrix4f worldTransform = parentTransform.mul(node.transform, new Matrix4f());
+        for (Matrix4f relativeTransform : node.transform) {
+            Matrix4f worldTransform = parentTransform.mul(relativeTransform, new Matrix4f());
         if (node.mesh == null) {
             for (gLTF.Node child : node.children) {
                 addLightsForNode(child, minDist, mats, newLights, worldTransform);
             }
         } else {
             addLightsForTriangleSet(minDist, mats, newLights, node.mesh.triangles, worldTransform);
+        }
         }
     }
     private void addLightsForTriangleSet(float minDist, List<Material> mats, List<Light> newLights, List<Triangle> tris, Matrix4f parentTransform) {

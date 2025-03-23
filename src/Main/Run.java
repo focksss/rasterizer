@@ -45,7 +45,7 @@ public class Run {
     private static int[] bloomMipTextures;
     private static Vec[] SSAOkernal;
     public static Shader
-            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader, upsampleShader, downsampleShader;
+            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader, upsampleShader, downsampleShader, outlineShader;
 
     public static long window, FPS = 240;
     static boolean isFullscreen = false; static int[] windowX = new int[1]; static int[] windowY = new int[1]; static int windowedWidth = 1920; static int windowedHeight = 1080;
@@ -116,7 +116,6 @@ public class Run {
             double thisFrameTime = (startTime - lastTime) / 1_000_000_000.0;
             if (thisFrameTime >= 0.5) {
                 currFPS = (float) (frames / thisFrameTime);
-                updateLine(0, "FPS: " + currFPS);
                 frames = 0;
                 lastTime = startTime;
             }
@@ -176,6 +175,7 @@ public class Run {
         update();
         updateWorldObjectInstances();
         render();
+        doOutlines();
         doGUI();
 
         glfwSwapBuffers(window);
@@ -217,10 +217,20 @@ public class Run {
         bloomIntensity = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(9)).value;
         bloomThreshold = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(10)).value;
     }
+    public static void doOutlines() {
+        outlineShader.setUniform("viewMatrix", viewMatrix);
+        outlineShader.setUniform("projectionMatrix", projectionMatrix);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        glViewport(0, 0, WIDTH, HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        drawScene(outlineShader, false, true);
+    }
 
     public static void createWorld() {
         //world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2");
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2", true);
         world.addGLTF(newObject);
 
         Light newLight = new Light(1);
@@ -248,7 +258,7 @@ public class Run {
         glClearColor(0.0f, 0.0f, 0.0f, -1);
         glClearTexImage(gPosition, 0, GL_RGBA, GL_FLOAT, new float[]{Float.POSITIVE_INFINITY,0,0,0});
         glEnable(GL_DEPTH_TEST);
-        drawScene(geometryShader, false);
+        drawScene(geometryShader, false, false);
 
         //ssao generation pass
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);
@@ -267,7 +277,7 @@ public class Run {
         glBindTexture(GL_TEXTURE_2D, SSAOnoiseTex);
         SSAOshader.setUniform("texNoise", 2);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-        
+
         //ssao blur pass
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOblurFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -306,7 +316,7 @@ public class Run {
         glEnable(GL_FRAMEBUFFER_SRGB);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glDisable(GL_FRAMEBUFFER_SRGB);
-        
+
         //bloom pass
         glBindFramebuffer(GL_FRAMEBUFFER, PBbloomFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -467,6 +477,8 @@ public class Run {
         GUI.backgroundShader = new Shader("src\\shaders\\GUIBackground\\GUIBackground.frag", "src\\shaders\\GUIBackground\\GUIBackground.vert");
         GUI.pointShader = new Shader("src\\shaders\\pointShader\\pointShader.frag", "src\\shaders\\pointShader\\pointShader.vert");
         GUI.lineShader = new Shader("src\\shaders\\lineShader\\line.frag", "src\\shaders\\lineShader\\line.vert");
+        GUI.lineShader = new Shader("src\\shaders\\lineShader\\line.frag", "src\\shaders\\lineShader\\line.vert");
+        outlineShader = new Shader("src\\shaders\\outlineShader\\outline.frag", "src\\shaders\\outlineShader\\outline.vert");
     }
     static void checkWindowSize() {
         IntBuffer width = MemoryUtil.memAllocInt(1);
@@ -728,7 +740,7 @@ public class Run {
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
-    private static void drawScene(Shader shader, boolean doFrustumCull) {
+    private static void drawScene(Shader shader, boolean doFrustumCull, boolean onlyOutlined) {
         for (World.worldObject obj : world.worldObjects) {
             for (int i = 0; i < obj.numInstances; i++) {
                 shader.setUniform("objectMatrix[" + i + "]", obj.transforms.get(i));
@@ -737,24 +749,34 @@ public class Run {
             glEnableVertexAttribArray(0);
             glDrawArraysInstanced(GL_TRIANGLES, 0, obj.triCount * 3, obj.numInstances);
         }
-        for (gLTF ignored : world.worldGLTFs) {
-            gLTF.Scene scene = gLTF.activeScene;
+        for (gLTF gltf : world.worldGLTFs) {
+            gLTF.Scene scene = gltf.activeScene;
             for (gLTF.Node node : scene.nodes) {
-                renderNode(node, new Matrix4f().identity(), shader, doFrustumCull);
+                renderNode(node, new Matrix4f().identity(), shader, doFrustumCull, onlyOutlined);
             }
         }
     }
-    private static void renderNode(gLTF.Node node, Matrix4f parentTransform, Shader shader, boolean doFrustumCull) {
-        Matrix4f worldTransform = parentTransform.mul(node.transform, new Matrix4f());
-        if (node.mesh == null) {
-            for (gLTF.Node childNode : node.children) {
-                renderNode(childNode, worldTransform, shader, doFrustumCull);
+    private static void renderNode(gLTF.Node node, Matrix4f parentTransform, Shader shader, boolean doFrustumCull, boolean onlyOutlined) {
+        if (node.show) {
+            if ((!onlyOutlined) || node.outline) {
+                if (!(node.mesh == null)) {
+                    int i = 0;
+                    for (Matrix4f relativeTransform : node.transform) {
+                        Matrix4f worldTransform = parentTransform.mul(relativeTransform, new Matrix4f());
+                        shader.setUniform("objectMatrix[" + i + "]", worldTransform);
+                        glBindVertexArray(node.mesh.VAO);
+                        glEnableVertexAttribArray(0);
+                        i++;
+                    }
+                    glDrawArraysInstanced(GL_TRIANGLES, 0, node.mesh.triCount * 3, node.transform.size());
+                }
+                for (Matrix4f relativeTransform : node.transform) {
+                    Matrix4f worldTransform = parentTransform.mul(relativeTransform, new Matrix4f());
+                    for (gLTF.Node childNode : node.children) {
+                        renderNode(childNode, worldTransform, shader, doFrustumCull, onlyOutlined);
+                    }
+                }
             }
-        } else if (!doFrustumCull || boxInFrustum(node.mesh.min, node.mesh.max, worldTransform)) {
-            shader.setUniform("objectMatrix[" + 0 + "]", worldTransform);
-            glBindVertexArray(node.mesh.VAO);
-            glEnableVertexAttribArray(0);
-            glDrawArrays(GL_TRIANGLES, 0, node.mesh.triCount * 3);
         }
     }
     private static class Plane {
@@ -844,7 +866,7 @@ public class Run {
                 shadowShader.setUniform("lightSpaceMatrix", light.lightSpaceMatrix);
 
                 glEnable(GL_DEPTH_TEST);
-                drawScene(shadowShader, false);
+                drawScene(shadowShader, false, false);
             }
         }
         glCullFace(GL_BACK);
@@ -888,7 +910,6 @@ public class Run {
         writer.newLine();
         writer.close();
     }
-
     public static void loadSave() {
         File saveFile = new File("save.txt");
         if (!saveFile.exists()) {
@@ -947,22 +968,5 @@ public class Run {
                 e.printStackTrace();
             }
         }
-    }
-
-    public static void print(String text) {
-        String[] splitText = text.split("\n");
-        Collections.addAll(lines, splitText);
-        refreshTextArea();
-    }
-
-    public static void updateLine(int lineNumber, String newText) {
-        if (lineNumber >= 0 && lineNumber < lines.size()) {
-            lines.set(lineNumber, newText);
-            refreshTextArea();
-        }
-    }
-
-    private static void refreshTextArea() {
-        textArea.setText(String.join("\n", lines));
     }
 }

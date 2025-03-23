@@ -7,7 +7,6 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 import org.lwjgl.system.MemoryUtil;
 
-import javax.lang.model.element.QualifiedNameable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,17 +28,17 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 import static org.lwjgl.system.MemoryUtil.memFree;
 
 public class gLTF {
-    public static List<Material> mtllib = new ArrayList<>();
-    public static List<String> texturePaths = new ArrayList<>();
-    public static Scene activeScene;
-    public static List<Scene> Scenes = new ArrayList<>();
-    public static List<Node> Nodes = new ArrayList<>();
-    public static List<Mesh> Meshes = new ArrayList<>();
+    public List<Material> mtllib = new ArrayList<>();
+    public List<String> texturePaths = new ArrayList<>();
+    public Scene activeScene;
+    public List<Scene> Scenes = new ArrayList<>();
+    public List<Node> Nodes = new ArrayList<>();
+    public List<Mesh> Meshes = new ArrayList<>();
     public List<Accessor> Accessors = new ArrayList<>();
     public List<BufferView> BufferViews = new ArrayList<>();
     public List<Buffer> Buffers = new ArrayList<>();
 
-    public gLTF(String gltfPath) {
+    public gLTF(String gltfPath, boolean show) {
         List<String> gltfMatMap = List.of("name", "baseColorFactor", "baseColorTexture", "metallicFactor", "roughnessFactor", "metallicTexture", "roughnessTexture", "doubleSided", "normalTexture", "metallicRoughnessTexture", "emissiveTexture", "emissiveFactor");
         List<String> mtlMatMap = List.of("name", "Kd", "map_Kd", "Pm", "Pr", "map_Pm", "map_Pr", "doubleSided", "map_Bump", "map_Pm&map_Pr", "map_Ke", "Ke");
         try {
@@ -118,9 +117,11 @@ public class gLTF {
                     JSONObject primitiveSet = primitives.getJSONObject(j);
                     JSONObject attributes = primitiveSet.getJSONObject("attributes");
                     for (String key : attributes.keySet()) {
-                        if (key.equals("POSITION")) positionAttributes.add(Accessors.get(attributes.getInt(key)));
-                        else if (key.equals("NORMAL")) normalAttributes.add(Accessors.get(attributes.getInt(key)));
-                        else if (key.equals("TEXCOORD_0")) texCoordAttributes.add(Accessors.get(attributes.getInt(key)));
+                        switch (key) {
+                            case "POSITION" -> positionAttributes.add(Accessors.get(attributes.getInt(key)));
+                            case "NORMAL" -> normalAttributes.add(Accessors.get(attributes.getInt(key)));
+                            case "TEXCOORD_0" -> texCoordAttributes.add(Accessors.get(attributes.getInt(key)));
+                        }
                     }
                     indices.add(Accessors.get(primitiveSet.getInt("indices")));
                     materialIndices.add(primitiveSet.getInt("material"));
@@ -150,13 +151,13 @@ public class gLTF {
                 if (node.has("mesh")) mesh = Meshes.get(node.getInt("mesh"));
                 List<Integer> childrenNodes = new ArrayList<>();
                 if (node.has("children")) {
-                    JSONArray children = node.getJSONArray("children");;
+                    JSONArray children = node.getJSONArray("children");
                     childrenNodes = new ArrayList<>();
                     for (int j = 0; j < children.length(); j++) {
                         childrenNodes.add(children.getInt(j));
                     }
                 }
-                Nodes.add(new Node(name, childrenNodes, mesh, transform));
+                Nodes.add(new Node(name, childrenNodes, mesh, transform, show));
             }
             for (Node node : Nodes) {
                 node.addChildren();
@@ -209,29 +210,26 @@ public class gLTF {
                                 Object PBRvalue = pbrMat.get(PBRkey);
                                 int mapKey = gltfMatMap.indexOf(PBRkey);
                                 String mtlProp = mtlMatMap.get(mapKey);
-                                if (mapKey != -1) {
-                                    int texIdx = -1;
-                                    if (PBRvalue instanceof JSONObject textureMap) {
-                                        texIdx = textureMap.getInt("index");
-                                        texturePaths.add(textureSources.get(texIdx));
-                                    } else if (PBRvalue instanceof Number) {
-                                        PBRvalue = ((Number) PBRvalue).floatValue();
-                                    } else if (PBRvalue instanceof JSONArray colorArray) {
-                                        PBRvalue = new Vec(colorArray.getNumber(0).floatValue(), colorArray.getNumber(1).floatValue(), colorArray.getNumber(2).floatValue());
-                                    }
-                                    if (mtlProp.contains("&")) {
-                                        String[] dualProperty = mtlProp.split("&");
-                                        material.setProperty(dualProperty[0], textureSources.get(texIdx));
-                                        material.setProperty(dualProperty[1], textureSources.get(texIdx));
-                                    } else {
-                                        material.setProperty(mtlProp, !PBRkey.contains("Texture") ? PBRvalue : textureSources.get(texIdx));
-                                    }
+                                int texIdx = -1;
+                                if (PBRvalue instanceof JSONObject textureMap) {
+                                    texIdx = textureMap.getInt("index");
+                                    texturePaths.add(textureSources.get(texIdx));
+                                } else if (PBRvalue instanceof Number) {
+                                    PBRvalue = ((Number) PBRvalue).floatValue();
+                                } else if (PBRvalue instanceof JSONArray colorArray) {
+                                    PBRvalue = new Vec(colorArray.getNumber(0).floatValue(), colorArray.getNumber(1).floatValue(), colorArray.getNumber(2).floatValue());
+                                }
+                                if (mtlProp.contains("&")) {
+                                    String[] dualProperty = mtlProp.split("&");
+                                    material.setProperty(dualProperty[0], textureSources.get(texIdx));
+                                    material.setProperty(dualProperty[1], textureSources.get(texIdx));
+                                } else {
+                                    material.setProperty(mtlProp, !PBRkey.contains("Texture") ? PBRvalue : textureSources.get(texIdx));
                                 }
                             }
                         } else if (key.contains("Texture")) {
                             JSONObject textureMapProperty = (JSONObject) value;
-                            int texIdx = -1;
-                            texIdx = textureMapProperty.getInt("index");
+                            int texIdx = textureMapProperty.getInt("index");
                             texturePaths.add(textureSources.get(texIdx));
                             int mapKey = gltfMatMap.indexOf(key);
                             String mtlProp = mtlMatMap.get(mapKey);
@@ -264,7 +262,7 @@ public class gLTF {
 
             constructPrimitives();
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Error: " + e.getMessage());
         }
     }
 
@@ -369,7 +367,7 @@ public class gLTF {
     }
 
 
-    public static class Scene {
+    public class Scene {
         String name;
         public List<Node> nodes;
 
@@ -378,33 +376,53 @@ public class gLTF {
             this.nodes = nodes;
         }
     }
-    public static class Node {
+    public class Node {
         String name;
         public Mesh mesh = null;
-        public Matrix4f transform = new Matrix4f().identity();
+        public List<Matrix4f> transform = new ArrayList<>();
         public List<Node> children = new ArrayList<>();
         public List<Integer> childrenIndices = new ArrayList<>();
+        public boolean show = true;
+        public boolean outline = false;
 
         public Node(String name, Mesh mesh, Matrix4f transform) {
             this.name = name;
             this.mesh = mesh;
-            this.transform = transform;
+            this.transform.add(transform);
         }
         public Node(String name, List<Integer> children, Matrix4f transform) {
             this.name = name;
             this.childrenIndices = children;
-            this.transform = transform;
+            this.transform.add(transform);
         }
         public Node(String name, List<Integer> children, Mesh mesh, Matrix4f transform) {
             this.name = name;
             this.childrenIndices = children;
             this.mesh = mesh;
-            this.transform = transform;
+            this.transform.add(transform);
         }
+        public Node(String name, List<Integer> children, Mesh mesh, Matrix4f transform, boolean show) {
+            this.name = name;
+            this.childrenIndices = children;
+            this.mesh = mesh;
+            this.transform.add(transform);
+            this.show = show;
+        }
+        public void toggleVis() {show = !show;}
+        public void toggleOutline() {outline = !outline;}
         public void addChildren() {
             for (Integer i : childrenIndices) {
                 children.add(Nodes.get(i));
             }
+        }
+        public void addInstance(Vec translation, Vec rotation, Vec scale) {
+            rotation.updateFloats();
+            transform.add(new Matrix4f().identity()
+                    .translate(translation.toVec3f())
+                    .rotateX(rotation.xF)
+                    .rotateY(rotation.yF)
+                    .rotateZ(rotation.zF)
+                    .scale(scale.toVec3f()));
         }
     }
     public static class Mesh {
@@ -433,12 +451,16 @@ public class gLTF {
             triangles.add(triangle);
         }
         public void initialize(int lastNumMats) {
+            min = new Vec(Double.MAX_VALUE);
+            max = new Vec(Double.MIN_VALUE);
             FloatBuffer verticesBuffer = MemoryUtil.memAllocFloat(45*triangles.size());
 
             int totalTriangles = triangles.size();
             int progressInterval = Math.max(totalTriangles / 10, 1);
             for (int i = 0; i < totalTriangles; i++) {
                 Triangle triangle = triangles.get(i);
+                min.shrinkTo(triangle.v1);
+                max.growTo(triangle.v1);
                 triCount++;
                 verticesBuffer.put(triangle.v1.toFloatArray());
                 verticesBuffer.put(triangle.vt1.toUVfloatArray());
