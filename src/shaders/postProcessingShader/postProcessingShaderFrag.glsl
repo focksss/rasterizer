@@ -9,6 +9,8 @@ uniform sampler2D skybox;
 uniform float exposure;
 uniform float gamma;
 
+uniform float bloomIntensity;
+
 uniform vec3 camRot;
 uniform float FOV;
 
@@ -19,12 +21,12 @@ void main() {
     vec4 c = texture(ppBuffer, texCoord).rgba;
     if (c.a == 1) {
         vec3 bloom = texture(bloomTex, texCoord).rgb;
-        vec3 hdrColor = mix(c.rgb, bloom, 0.015);
+        vec3 hdrColor = mix(c.rgb, bloom, bloomIntensity);
 
         vec3 mapped = vec3(1.0) - exp(-hdrColor * exposure);
         // gamma correction
         mapped = pow(mapped, vec3(1.0 / gamma));
-    
+
         fragColor = vec4(mapped, 1.0);
     }
 }
