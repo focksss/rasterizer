@@ -1,14 +1,14 @@
-Position: 9.150330084745093 2.3271194627750447 -0.5950539553326237
-Rotation: -0.04920381208392577 -221.2997684101574 0.0
+Position: 11.002041758844626 2.8075581340026474 -0.4987916377925288
+Rotation: 0.07579624705505772 -221.27500018430874 0.0
 Max_FPS: 240
 FOV: 100.03074
-Exposure: 5.257201
-Gamma: 0.43844303
-Do_SSAO: true
-SSAO_Radius: 1.3837447
-SSAO_Bias: 0.0013460217
-Bloom_radius: 1.0
-Bloom_intensity: 10.0
-Bloom_threshold: 0.5
+Exposure: 3.0709875
+Gamma: 0.7899519
+Do_SSAO: false
+SSAO_Radius: 0.05486963
+SSAO_Bias: 0.0
+Bloom_radius: 0.0
+Bloom_intensity: 0.5
+Bloom_threshold: 0.52040464
 Cap_FPS: false
 Borderless_fullscreen: true

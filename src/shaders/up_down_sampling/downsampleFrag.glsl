@@ -2,14 +2,15 @@
 
 //
 uniform sampler2D srcTexture;
-uniform vec2 srcResolution;
+uniform vec3 srcResolution;
 
 in vec2 texCoord;
-layout (location = 0) out vec3 downsample;
+layout (location = 0) out vec4 downsampleOut;
 
 void main()
 {
-    vec2 srcTexelSize = 1.0 / srcResolution;
+    vec3 downsample = vec3(1,0,0);
+    vec2 srcTexelSize = 1.0 / srcResolution.xy;
     float x = srcTexelSize.x;
     float y = srcTexelSize.y;
 
@@ -54,4 +55,5 @@ void main()
     downsample += (a+c+g+i)*0.03125;
     downsample += (b+d+f+h)*0.0625;
     downsample += (j+k+l+m)*0.125;
+    downsampleOut = vec4(downsample, 1);
 }

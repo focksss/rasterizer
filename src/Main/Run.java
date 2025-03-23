@@ -86,8 +86,8 @@ public class Run {
         gui = new GUI();
         compileShaders();
         controller = new Controller(camPos, camRot, window);
-        runEngine();
-        //test();
+        //runEngine();
+        test();
         updateSave();
 
         //Util.PBRtextureSeparator.splitPrPm_GB("C:/Graphics/assets/bistro2/textures");
@@ -187,23 +187,34 @@ public class Run {
                 .setText("FPS: " + (int) currFPS);
         ((GUI.GUILabel) GUI.objects.get(0).children.get(2).elements.get(1))
                 .setText("Position: " + String.format("%.2f %.2f %.2f", controller.cameraPos.x, controller.cameraPos.y, controller.cameraPos.z));
-        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(3)).label
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(3)).label
                 .setText("Exposure: " + EXPOSURE);
-        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(4)).label
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(4)).label
                 .setText("Gamma: " + GAMMA);
-        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(5)).label
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(5)).label
                 .setText("FOV: " + FOV);
-        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(6)).label
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(6)).label
                 .setText("SSAO radius: " + SSAOradius);
-        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(7)).label
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(7)).label
                 .setText("SSAO bias: " + SSAObias);
-        GUI.objects.get(0).children.get(0).position.y = ((GUI.GUIScroller) GUI.objects.get(0).elements.get(4)).value;
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(8)).label
+                .setText("Bloom radius: " + bloomRadius);
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(9)).label
+                .setText("Bloom intensity: " + bloomIntensity);
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(10)).label
+                .setText("Bloom threshold: " + bloomThreshold);
+        GUI.objects.get(0).children.get(0).children.get(0).position.y = ((GUI.GUIScroller) GUI.objects.get(0).elements.get(4)).shift;
+        //.65 gets to bottom
+        //.525 to 2nd to bottom
         if (Controller.escaped) GUI.renderGUI();
-        EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(3)).value;
-        GAMMA = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(4)).value;
-        FOV = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(5)).value;
-        SSAOradius = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(6)).value;
-        SSAObias = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).elements.get(7)).value;
+        EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(3)).value;
+        GAMMA = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(4)).value;
+        FOV = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(5)).value;
+        SSAOradius = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(6)).value;
+        SSAObias = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(7)).value;
+        bloomRadius = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(8)).value;
+        bloomIntensity = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(9)).value;
+        bloomThreshold = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(10)).value;
     }
 
     public static void createWorld() {
@@ -295,9 +306,39 @@ public class Run {
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glDisable(GL_FRAMEBUFFER_SRGB);
         
-        //blur bloom pass (replace this with a gaussian blur fbo)
-        gaussianBlur(bloomTex);
-        //
+        //bloom pass
+        glBindFramebuffer(GL_FRAMEBUFFER, PBbloomFBO);
+        glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        downsampleShader.useProgram();
+        //set init write
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, bloomTex);
+        downsampleShader.setUniform("srcTexture", 0);
+        for (int i = 0; i < 6; i++) {
+            int resDiv = (int) Math.pow(2, i);
+            glViewport(0, 0, WIDTH/resDiv, HEIGHT/resDiv);
+            downsampleShader.setUniform("srcResolution", new Vec(WIDTH/resDiv, HEIGHT/resDiv));
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloomMipTextures[i], 0);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            //next write
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, bloomMipTextures[i]);
+            downsampleShader.setUniform("srcTexture", 0);
+        }
+        upsampleShader.setUniform("filterRadius", bloomRadius);
+        for (int i = 5; i > 0; i--) {
+            int resDiv = (int) Math.pow(2, i-1);
+            glViewport(0, 0, WIDTH/resDiv, HEIGHT/resDiv);
+            //set read
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, bloomMipTextures[i]);
+            upsampleShader.setUniform("srcTexture", 0);
+            //set write
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloomMipTextures[i-1], 0);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
+
+        //post process
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -305,12 +346,12 @@ public class Run {
         glBindTexture(GL_TEXTURE_2D, lightingTex);
         postProcessingShader.setUniform("postProcessingBuffer", 0);
         glActiveTexture(GL_TEXTURE2);
-        //replace this texture with new guassian blur texture later
-        glBindTexture(GL_TEXTURE_2D, gaussianBlurTex);
+        glBindTexture(GL_TEXTURE_2D, bloomMipTextures[0]);
         postProcessingShader.setUniform("bloomTex", 2);
         postProcessingShader.setUniform("skybox", 1);
+        postProcessingShader.setUniform("bloomIntensity", bloomIntensity);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-        
+
         renderToQuad(postProcessingTex);
     }
 
@@ -346,7 +387,6 @@ public class Run {
         lightingShader.setUniform("width", WIDTH);
         lightingShader.setUniform("height", HEIGHT);
         lightingShader.setUniform("SSAO", doSSAO);
-        lightingShader.setUniform("bloom_radius", bloomRadius);
         lightingShader.setUniform("bloom_threshold", bloomThreshold);
         lightingShader.setUniform("bloom_intensity", bloomIntensity);
         SSAOshader.setUniform("width", WIDTH);
@@ -609,17 +649,17 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, PBbloomFBO);
         bloomMipTextures = new int[6];
         for (int i = 0; i < 6; i++) {
-            int resDiv = 2*i;
+            int resDiv = (int) Math.pow(2, i);
             bloomMipTextures[i] = glGenTextures();
             glBindTexture(GL_TEXTURE_2D, bloomMipTextures[i]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, WIDTH/resDiv, HEIGHT/resDiv, 0, GL_RGB, GL_FLOAT, MemoryUtil.NULL);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH/resDiv, HEIGHT/resDiv, 0, GL_RGBA, GL_FLOAT, MemoryUtil.NULL);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         }
-        int[] bloomMips = new int[6]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5};
-        glDrawBuffers(bloomMips);
+        glDrawBuffers(GL_COLOR_ATTACHMENT0);
+        glReadBuffer(GL_NONE);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }

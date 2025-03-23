@@ -23,7 +23,6 @@ uniform sampler2D skybox;
 uniform int width;
 uniform int height;
 
-uniform float bloom_radius;
 uniform float bloom_threshold;
 uniform float bloom_intensity;
 
@@ -341,6 +340,7 @@ vec3 getSkyboxCol(float fov, float aspectRatio) {
 
 void main() {
     vec4 initSample = texture(gPosition, texCoord).rgba;
+
     if (isinf(initSample.r)) {
         fragColor = vec4(getSkyboxCol(100, width/height)*0.5,1);
     } else {
@@ -353,7 +353,23 @@ void main() {
         vec3 p = thisPosition;
         vec3 albedo = thisMtl.Kd;
         vec3 N = thisNormal;
-        //fragColor = vec4(thisMtl.Ke, 1); return;
+        /*
+        if (texCoord.x < 0.166) {
+            fragColor = vec4(sin(thisPosition)*0.5 + 0.5, 1); return;
+        } else if (texCoord.x < 0.333) {
+            fragColor = vec4(N*0.5 + 0.5, 1); return;
+        } else if (texCoord.x < 0.5) {
+            fragColor = vec4(thisTexCoord, 0, 1); return;
+        } else if (texCoord.x < 0.666) {
+            fragColor = vec4(vec3(thisMtlID*(1.0/381.0), 1-thisMtlID*(1.0/381.0), 0),1); return;
+        } else if (texCoord.x < 0.833){
+            fragColor = vec4(thisMtl.Kd, 1); return;
+        }
+        */
+        //fragColor = vec4(vec3(thisMtl.d), 1);
+        //fragColor = vec4(vec3(thisMtl.map_Kd/101.0), 1);
+        //fragColor = vec4(thisMtl.Kd, 1);
+        //fragColor = vec4(1);
         float metallic = thisMtl.Pm;
         float roughness = thisMtl.Pr;
         //ambient occlusion

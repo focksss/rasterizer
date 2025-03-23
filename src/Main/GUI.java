@@ -46,6 +46,8 @@ import static org.lwjgl.system.MemoryUtil.memSlice;
  * If a GUI element does not have a parent, then it will be rendered relative to the entire screen
  * <p>
  * Scale and position are both relative to the parent element, where 0,0 is the bottom left, and scale and position increase up and right
+ * <p>
+ * Clipping is done relative to the parent, to clip an object to its own bounds, don't set clip parameters in the constructor or set them to be the same as the objects own position and scale
  */
 
 public class GUI {
@@ -73,17 +75,15 @@ public class GUI {
     public void toDefaultGUI() {
         objects.clear();
         GUIQuad quad1 = new GUIQuad(new Vec(0.3));
-        GUIQuad quad4 = new GUIQuad(new Vec(0.025,-10), new Vec(0.95, 20), new Vec(0.25));
+        GUIQuad quad4 = new GUIQuad(new Vec(0.25));
         GUIQuad quad2 = new GUIQuad(new Vec(0.2));
         GUIQuad quad3 = new GUIQuad(new Vec(0.8,0.2,0.2));
 
-        GUIObject clipObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8), null);
-        GUIObject settingsClip = new GUIObject(new Vec(0.1, 0.25), new Vec(0.3, 0.55), null);
-        settingsClip.size.updateFloats();
-        GUIObject mainObject = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8), clipObject);
-        GUIObject settings = new GUIObject(new Vec(0,0), new Vec(1, 0.9), settingsClip);
-        GUIObject subObject = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1), clipObject);
-        GUIObject subObject1 = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1), clipObject);
+        GUIObject main = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
+        GUIObject settings = new GUIObject(new Vec(0.05,0.2), new Vec(0.9, 0.65));
+        GUIObject settingsElements = new GUIObject(new Vec(0,0), new Vec(1, 1), new Vec(0,-10), new Vec(1, 20));
+        GUIObject fps = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1));
+        GUIObject position = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1));
 
         GUILabel emptyText = new GUILabel(new Vec(), "", 0f, new Vec());
         GUILabel fpsText = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
@@ -98,6 +98,9 @@ public class GUI {
         GUILabel FOVtext = new GUILabel(new Vec(0.05, 0.65), "FOV: ", 0.8f, new Vec(1));
         GUILabel SSAOrText = new GUILabel(new Vec(0.05, 0.65), "SSAO radius: ", 0.8f, new Vec(1));
         GUILabel SSAObText = new GUILabel(new Vec(0.05, 0.65), "SSAO bias: ", 0.8f, new Vec(1));
+        GUILabel bloomRText = new GUILabel(new Vec(0.05, 0.65), "Bloom radius: ", 0.8f, new Vec(1));
+        GUILabel bloomIText = new GUILabel(new Vec(0.05, 0.65), "Bloom intensity: ", 0.8f, new Vec(1));
+        GUILabel bloomTText = new GUILabel(new Vec(0.05, 0.65), "Bloom threshold: ", 0.8f, new Vec(1));
 
         GUIButton exit = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), exitText, quad3, Run::Quit, false, false);
         GUIButton recompile = new GUIButton(new Vec(0.05, 0.85), new Vec(0.9, 0.1), recompileText, quad2, Run::compileShaders, false, false);
@@ -107,64 +110,73 @@ public class GUI {
         GUISlider FOV = new GUISlider(new Vec(0.05, 0.25), new Vec(0.9, 0.1), FOVtext, quad2, 0.001f, 179.999f, new Vec(1), new Vec(1), Run.FOV);
         GUISlider SSAOr = new GUISlider(new Vec(0.05, 0.1), new Vec(0.9, 0.1), SSAOrText, quad2, 0, 20, new Vec(1), new Vec(1), Run.SSAOradius);
         GUISlider SSAOb = new GUISlider(new Vec(0.05, -0.05), new Vec(0.9, 0.1), SSAObText, quad2, 0, 0.1f, new Vec(1), new Vec(1), Run.SSAObias);
+        GUISlider bloomR = new GUISlider(new Vec(0.05, -0.2), new Vec(0.9, 0.1), bloomRText, quad2, 0, 1f, new Vec(1), new Vec(1), Run.bloomRadius);
+        GUISlider bloomI = new GUISlider(new Vec(0.05, -0.35), new Vec(0.9, 0.1), bloomIText, quad2, 0, 1f, new Vec(1), new Vec(1), Run.bloomIntensity);
+        GUISlider bloomT = new GUISlider(new Vec(0.05, -0.5), new Vec(0.9, 0.1), bloomTText, quad2, 0, 10f, new Vec(1), new Vec(1), Run.bloomThreshold);
         //
-        List<Runnable> moveActions = new ArrayList<>(); moveActions.add(mainObject::toMouse); moveActions.add(settingsClip::toMouse);
-        GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, moveActions, true, true);
-        GUIScroller scroll = new GUIScroller(new Vec(0.975, 0.05), new Vec(0.025, 0.9), emptyText, quad1, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
-        scroll.setTotalGUI(0.85f - (-0.05f)); // top button h - bottom button h
+        GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, main::toMouse, true, true);
+        GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad1, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
+        scroll.setTotalGUI((0.95f - (-0.5f)) + 0.1f); // absTop - bottom + buffer space
 
-        mainObject.addElement(quad1);
-        mainObject.addElement(moveGUI);
-        mainObject.addElement(settingsText);
-        mainObject.addElement(exit);
-        mainObject.addElement(scroll);
+        main.addElement(quad1);
+        main.addElement(moveGUI);
+        main.addElement(settingsText);
+        main.addElement(exit);
+        settings.addElement(scroll);
         settings.addElement(quad4);
-        settings.addElement(recompile);
-        settings.addElement(screenshot);
-        settings.addElement(exposure);
-        settings.addElement(gamma);
-        settings.addElement(FOV);
-        settings.addElement(SSAOr);
-        settings.addElement(SSAOb);
+        settings.addChild(settingsElements);
+        settingsElements.addElement(recompile);
+        settingsElements.addElement(recompile);
+        settingsElements.addElement(screenshot);
+        settingsElements.addElement(exposure);
+        settingsElements.addElement(gamma);
+        settingsElements.addElement(FOV);
+        settingsElements.addElement(SSAOr);
+        settingsElements.addElement(SSAOb);
+        settingsElements.addElement(bloomR);
+        settingsElements.addElement(bloomI);
+        settingsElements.addElement(bloomT);
 
-        mainObject.addChild(settings);
-        mainObject.addChild(subObject);
-        mainObject.addChild(subObject1);
+        main.addChild(settings);
+        main.addChild(fps);
+        main.addChild(position);
 
-        subObject.addElement(quad2);
-        subObject.addElement(fpsText);
-        subObject1.addElement(quad2);
-        subObject1.addElement(posText);
+        fps.addElement(quad2);
+        fps.addElement(fpsText);
+        position.addElement(quad2);
+        position.addElement(posText);
 
-        objects.add(mainObject);
-        objects.add(clipObject);
+        objects.add(main);
     }
 
     public static void renderGUI() {
         glDisable(GL_CULL_FACE);
         for (GUIObject object : objects) {
-            renderObject(object, new Vec(0), new Vec(1));
+            renderObject(object, new Vec(0), new Vec(1), new Vec(0), new Vec(1));
         }
         lastMouse = mousePos;
     }
-    private static void renderObject(GUIObject object, Vec parentPosition, Vec parentScale) {
+    private static void renderObject(GUIObject object, Vec parentPosition, Vec parentScale, Vec parentClipMin, Vec parentClipMax) {
         Vec localPos = parentPosition.add(parentScale.mult(object.position));
         Vec localSize = parentScale.mult(object.size);
+
+        Vec localClipMin = (parentPosition.add(parentScale.mult(object.clipPosition)));
+        localClipMin.growTo(parentClipMin);
+        Vec localClipSize = parentScale.mult(object.clipSize);
+        Vec localClipMax = (localClipMin.add(localClipSize));
+        localClipMax.shrinkTo(parentClipMax);
+
         object.checkHover(localPos, localPos.add(localSize));
-        if (object.clipTo != null) {
-            Vec clipMin = object.clipTo.position.mult(new Vec(Run.WIDTH, Run.HEIGHT));
-            Vec clipMax = (object.clipTo.position.add(object.clipTo.size)).mult(new Vec(Run.WIDTH, Run.HEIGHT));
-            setClipBounds(clipMin, clipMax);
-        } else {
-            Vec clipMin = new Vec(0);
-            Vec clipMax = new Vec(Run.WIDTH, Run.HEIGHT);
-            setClipBounds(clipMin, clipMax);
-        }
+
+        Vec clipMin = localClipMin.mult(new Vec(Run.WIDTH, Run.HEIGHT));
+        Vec clipMax = localClipMax.mult(new Vec(Run.WIDTH, Run.HEIGHT));
+        setClipBounds(clipMin, clipMax);
+
         for (Object element : object.elements) {
             renderElement(element, localPos, localSize);
         }
         for (GUIObject child : object.children) {
-            renderObject(child, localPos, localSize);
+            renderObject(child, localPos, localSize, localClipMin, localClipMax);
         }
     }
     private static void setClipBounds(Vec clipMin, Vec clipMax) {
@@ -213,12 +225,11 @@ public class GUI {
             Vec p1 = pos.add(size.mult(new Vec(0.5,0.05)));
             Vec p2 = pos.add(size.mult(new Vec(0.5, 0.95)));
             renderLine(p1, p2, scroller.width, scroller.lineColor);
-            double percent = (scroller.value - scroller.Lbound) / (scroller.linked.clipTo.size.y - scroller.Lbound);
+            double percent = (scroller.value - scroller.Lbound) / (scroller.totalGUI - scroller.Lbound);
             Vec pointPos = p2.add((p1.sub(p2)).mult(percent));
             Vec pointPos1 = p2.add((p1.sub(p2)).mult(percent+scroller.barSize));
             renderLine(pointPos, pointPos1, scroller.width, scroller.pointColor);
             scroller.doScroller(mousePos, pointPos, pointPos1, p2, p1);
-            scroller.value = (float) clamp(scroller.value, scroller.Lbound, scroller.linked.clipTo.size.y);
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -256,15 +267,23 @@ public class GUI {
     public static class GUIObject {
         Vec position;
         Vec size;
+        Vec clipPosition;
+        Vec clipSize;
         List<GUIObject> children = new ArrayList<>();
         List<Object> elements = new ArrayList<>();
-        GUIObject clipTo;
         boolean hovered;
 
-        public GUIObject(Vec position, Vec size, GUIObject clipTo) {
+        public GUIObject(Vec position, Vec size, Vec clipPosition, Vec clipSize) {
             this.position = position;
             this.size = size;
-            this.clipTo = clipTo;
+            this.clipPosition = clipPosition;
+            this.clipSize = clipSize;
+        }
+        public GUIObject(Vec position, Vec size) {
+            this.position = position;
+            this.size = size;
+            this.clipPosition = position;
+            this.clipSize = size;
         }
         public void addChild(GUIObject child) {
             children.add(child);
@@ -275,7 +294,7 @@ public class GUI {
         public void toMouse() {
             Vec offset = ((mousePos.sub(lastMouse))).div(new Vec(Run.WIDTH, Run.HEIGHT));
             position = position.add(new Vec(offset.x, -offset.y));
-            if (!(clipTo == null)) clipTo.position = clipTo.position.add(new Vec(offset.x, -offset.y));
+            clipPosition = clipPosition.add(new Vec(offset.x, -offset.y));
         }
         public void checkHover(Vec min, Vec max) {
             Vec screenSpaceMin = new Vec(min.x * Run.WIDTH, (1 - max.y) * Run.HEIGHT);
@@ -469,6 +488,7 @@ public class GUI {
         float Lbound;
         public float value;
         float width;
+        float shift;
         Vec lineColor;
         Vec pointColor;
         float totalGUI;
@@ -496,7 +516,7 @@ public class GUI {
         }
         void setTotalGUI(float totalGUI) {
             this.totalGUI = totalGUI;
-            this.barSize = (float) (linked.clipTo.size.y / totalGUI);
+            this.barSize = (float) (linked.clipSize.y / totalGUI);
         }
 
         public void doScroller(Vec mousePos, Vec pointPos, Vec pointPos1, Vec p1, Vec p2) {
@@ -525,7 +545,8 @@ public class GUI {
                     }
                     percent -= initialClickHeight;
                     mouseInteractingWith = ID;
-                    value = (float) clamp(Lbound + percent * (linked.clipTo.size.y - Lbound), Lbound, linked.clipTo.size.y);
+                    value = clamp(percent * (totalGUI), 0, totalGUI);
+//                    System.out.println(percent + " " + value);
                 }
             } else {
                 held = false;
@@ -545,7 +566,9 @@ public class GUI {
             } else {
                 linkedHovered = false;
             }
-            value = (float) clamp(value, 0, linked.clipTo.size.y * (1 - barSize));
+            value = (float) clamp(value, 0, totalGUI * (1 - barSize));
+            shift = totalGUI*(0.65f/1.55f)*(float) (value/(linked.clipSize.y* (1 - barSize)));
+            //System.out.println(value/(linked.clipTo.size.y* (1 - barSize)));
         }
     }
 
