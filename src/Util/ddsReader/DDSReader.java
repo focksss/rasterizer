@@ -13,7 +13,7 @@
  * 
  */
 
-package ddsReader;
+package Util.ddsReader;
 
 public final class DDSReader {
 	

@@ -75,6 +75,11 @@ public class Shader {
         for (int i = 0; i < values.length; i++) buffer.put(values[i]);
         glUniform1iv(glGetUniformLocation(program, name), buffer);
     }
+    public void setUniformTexture(String name, int texture, int id) {
+        glActiveTexture(GL_TEXTURE0 + id);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        this.setUniform(name, id);
+    }
 
     private static int createShader(int type, String source) {
         int shader = glCreateShader(type);

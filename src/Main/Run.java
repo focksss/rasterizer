@@ -34,16 +34,15 @@ public class Run {
             lightingFBO, lightingTex, lightingRBO,
             gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal, gDepth,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
-            bloomFBO, PBbloomFBO,
-            postProcessingFBO, postProcessingTex, bloomTex,
+            PBbloomFBO, SSRfbo,
+            postProcessingFBO, postProcessingTex, bloomTex, SSRtex,
             skyboxTex,
             gaussianBlurTexOneHalf, gaussianBlurTex;
     private static int[] gaussianBlurFBO;
     private static int[] bloomMipTextures;
     private static Vec[] SSAOkernal;
     public static Shader
-            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader, upsampleShader, downsampleShader, outlineShader;
-
+            geometryShader, screenShader, skyboxShader, shadowShader, lightingShader, SSAOshader, blurShader, postProcessingShader, gaussianBlurShader, debugShader, upsampleShader, downsampleShader, outlineShader, SSRshader;
     public static long window, FPS = 240;
     static boolean isFullscreen = false; static int[] windowX = new int[1]; static int[] windowY = new int[1]; static int windowedWidth = 1920; static int windowedHeight = 1080;
     static GLFWVidMode vidMode;
@@ -228,7 +227,7 @@ public class Run {
     public static void createWorld() {
         //world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
         //gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", true);
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2", true);
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\sponzaGLTF", true);
         //grassBlock.Nodes.get(0).toggleOutline();
         //newObject.Nodes.get(newObject.Nodes.size()-1).toggleOutline();
         world.addGLTF(newObject);
@@ -268,51 +267,28 @@ public class Run {
             SSAOshader.setUniform("samples[" + i + "]", SSAOkernal[i]);
         }
         SSAOshader.setUniform("projection", projectionMatrix);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gViewPosition);
-        SSAOshader.setUniform("gViewPosition", 0);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, gViewNormal);
-        SSAOshader.setUniform("gNormal", 1);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, SSAOnoiseTex);
-        SSAOshader.setUniform("texNoise", 2);
+        SSAOshader.setUniformTexture("gViewPosition", gViewPosition, 0);
+        SSAOshader.setUniformTexture("gNormal", gViewNormal, 1);
+        SSAOshader.setUniformTexture("texNoise", SSAOnoiseTex, 2);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         //ssao blur pass
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOblurFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, SSAOtex);
-        blurShader.setUniform("blurInput", 0);
+        blurShader.setUniformTexture("blurInput", SSAOtex, 0);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         //lighting pass
         glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        lightingShader.useProgram();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, gPosition);
-        lightingShader.setUniform("gPosition", 0);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, gNormal);
-        lightingShader.setUniform("gNormal", 1);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, gMaterial);
-        lightingShader.setUniform("gMaterial", 2);
-        glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, gTexCoord);
-        lightingShader.setUniform("gTexCoord", 3);
-        glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, world.worldLights.get(0).shadowmapTexture);
-        lightingShader.setUniform("shadowmaps", 4);
-        glActiveTexture(GL_TEXTURE5);
-        glBindTexture(GL_TEXTURE_2D, SSAOblurTex);
-        lightingShader.setUniform("SSAOtex", 5);
-        glActiveTexture(GL_TEXTURE6);
-        glBindTexture(GL_TEXTURE_2D, skyboxTex);
-        lightingShader.setUniform("skybox", 6);
+        lightingShader.setUniformTexture("gPosition", gPosition, 0);
+        lightingShader.setUniformTexture("gNormal", gNormal, 1);
+        lightingShader.setUniformTexture("gMaterial", gMaterial, 2);
+        lightingShader.setUniformTexture("gTexCoord", gTexCoord, 3);
+        lightingShader.setUniformTexture("shadowmaps", world.worldLights.get(0).shadowmapTexture, 4);
+        lightingShader.setUniformTexture("SSAOtex", SSAOblurTex, 5);
+        lightingShader.setUniformTexture("skybox", skyboxTex, 6);
         lightingShader.setUniform("FOV", FOV);
         glEnable(GL_FRAMEBUFFER_SRGB);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -321,11 +297,8 @@ public class Run {
         //bloom pass
         glBindFramebuffer(GL_FRAMEBUFFER, PBbloomFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        downsampleShader.useProgram();
         //set init write
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, bloomTex);
-        downsampleShader.setUniform("srcTexture", 0);
+        downsampleShader.setUniformTexture("srcTexture", bloomTex, 0);
         for (int i = 0; i < 6; i++) {
             int resDiv = (int) Math.pow(2, i);
             glViewport(0, 0, WIDTH/resDiv, HEIGHT/resDiv);
@@ -333,18 +306,14 @@ public class Run {
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloomMipTextures[i], 0);
             glDrawArrays(GL_TRIANGLES, 0, 6);
             //next write
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, bloomMipTextures[i]);
-            downsampleShader.setUniform("srcTexture", 0);
+            downsampleShader.setUniformTexture("srcTexture", bloomMipTextures[i], 0);
         }
         upsampleShader.setUniform("filterRadius", bloomRadius);
         for (int i = 5; i > 0; i--) {
             int resDiv = (int) Math.pow(2, i-1);
             glViewport(0, 0, WIDTH/resDiv, HEIGHT/resDiv);
             //set read
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, bloomMipTextures[i]);
-            upsampleShader.setUniform("srcTexture", 0);
+            upsampleShader.setUniformTexture("srcTexture", bloomMipTextures[i], 0);
             //set write
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bloomMipTextures[i-1], 0);
             glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -354,13 +323,8 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, lightingTex);
-        postProcessingShader.setUniform("postProcessingBuffer", 0);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, bloomMipTextures[0]);
-        postProcessingShader.setUniform("bloomTex", 2);
-        postProcessingShader.setUniform("skybox", 1);
+        postProcessingShader.setUniformTexture("postProcessingBuffer", lightingTex, 0);
+        postProcessingShader.setUniformTexture("bloomTex", bloomMipTextures[0], 1);
         postProcessingShader.setUniform("bloomIntensity", bloomIntensity);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
@@ -480,6 +444,7 @@ public class Run {
         GUI.lineShader = new Shader("src\\shaders\\lineShader\\line.frag", "src\\shaders\\lineShader\\line.vert");
         GUI.lineShader = new Shader("src\\shaders\\lineShader\\line.frag", "src\\shaders\\lineShader\\line.vert");
         outlineShader = new Shader("src\\shaders\\outlineShader\\outline.frag", "src\\shaders\\outlineShader\\outline.vert");
+        SSRshader = new Shader("src\\shaders\\SSRshader\\SSR.frag", "src\\shaders\\quadVertex.glsl");
     }
     static void checkWindowSize() {
         IntBuffer width = MemoryUtil.memAllocInt(1);
@@ -616,8 +581,6 @@ public class Run {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postProcessingTex, 0);
         glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 
         SSAOfbo = glGenFramebuffers();
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);
@@ -676,6 +639,16 @@ public class Run {
         }
         glDrawBuffers(GL_COLOR_ATTACHMENT0);
         glReadBuffer(GL_NONE);
+
+        SSRfbo = glGenFramebuffers();
+        glBindFramebuffer(GL_FRAMEBUFFER, SSRfbo);
+        SSRtex = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, SSRtex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSRtex, 0);
+        glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
