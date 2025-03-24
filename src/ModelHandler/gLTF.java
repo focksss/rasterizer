@@ -38,7 +38,10 @@ public class gLTF {
     public List<BufferView> BufferViews = new ArrayList<>();
     public List<Buffer> Buffers = new ArrayList<>();
 
+    public boolean show = true;
+
     public gLTF(String gltfPath, boolean show) {
+        this.show = show;
         List<String> gltfMatMap = List.of("name", "baseColorFactor", "baseColorTexture", "metallicFactor", "roughnessFactor", "metallicTexture", "roughnessTexture", "doubleSided", "normalTexture", "metallicRoughnessTexture", "emissiveTexture", "emissiveFactor");
         List<String> mtlMatMap = List.of("name", "Kd", "map_Kd", "Pm", "Pr", "map_Pm", "map_Pr", "doubleSided", "map_Bump", "map_Pm&map_Pr", "map_Ke", "Ke");
         try {
@@ -377,7 +380,7 @@ public class gLTF {
         }
     }
     public class Node {
-        String name;
+        public String name;
         public Mesh mesh = null;
         public List<Matrix4f> transform = new ArrayList<>();
         public List<Node> children = new ArrayList<>();
@@ -426,7 +429,7 @@ public class gLTF {
         }
     }
     public static class Mesh {
-        String name;
+        public String name;
         List<Accessor> positionAttribute;
         List<Accessor> normalAttribute;
         List<Accessor> texCoordAttribute;
@@ -435,6 +438,8 @@ public class gLTF {
         public List<Triangle> triangles = new ArrayList<>();
         public int VAO;
         public int VBO;
+        public int boundVAO;
+        public int boundVBO;
         public int triCount = 0;
         public Vec min = new Vec(Double.MAX_VALUE);
         public Vec max = new Vec(Double.MIN_VALUE);
@@ -460,7 +465,11 @@ public class gLTF {
             for (int i = 0; i < totalTriangles; i++) {
                 Triangle triangle = triangles.get(i);
                 min.shrinkTo(triangle.v1);
+                min.shrinkTo(triangle.v2);
+                min.shrinkTo(triangle.v3);
                 max.growTo(triangle.v1);
+                max.growTo(triangle.v2);
+                max.growTo(triangle.v3);
                 triCount++;
                 verticesBuffer.put(triangle.v1.toFloatArray());
                 verticesBuffer.put(triangle.vt1.toUVfloatArray());
@@ -512,6 +521,75 @@ public class gLTF {
             glEnableVertexAttribArray(5);
 
             memFree(verticesBuffer);
+
+
+
+            FloatBuffer boundBuffer = MemoryUtil.memAllocFloat(24 * 9);
+            // Bottom
+            boundBuffer.put(new Vec(min.x, min.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, min.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, min.y, max.z).toFloatArray());
+
+            boundBuffer.put(new Vec(max.x, min.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, min.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, min.y, min.z).toFloatArray());
+
+            // Top
+            boundBuffer.put(new Vec(min.x, max.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, max.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, max.y, max.z).toFloatArray());
+
+            boundBuffer.put(new Vec(max.x, max.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, max.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, max.y, min.z).toFloatArray());
+
+            // Front
+            boundBuffer.put(new Vec(min.x, min.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, min.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, max.y, max.z).toFloatArray());
+
+            boundBuffer.put(new Vec(max.x, max.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, max.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, min.y, max.z).toFloatArray());
+
+            // Back
+            boundBuffer.put(new Vec(min.x, min.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, min.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, max.y, min.z).toFloatArray());
+
+            boundBuffer.put(new Vec(max.x, max.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, max.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, min.y, min.z).toFloatArray());
+
+            // Left
+            boundBuffer.put(new Vec(min.x, min.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, min.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, max.y, max.z).toFloatArray());
+
+            boundBuffer.put(new Vec(min.x, max.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, max.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(min.x, min.y, min.z).toFloatArray());
+
+            // Right
+            boundBuffer.put(new Vec(max.x, min.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, min.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, max.y, max.z).toFloatArray());
+
+            boundBuffer.put(new Vec(max.x, max.y, max.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, max.y, min.z).toFloatArray());
+            boundBuffer.put(new Vec(max.x, min.y, min.z).toFloatArray());
+
+            boundBuffer.flip();
+            boundVAO = glGenVertexArrays();
+            glBindVertexArray(boundVAO);
+            boundVBO = glGenBuffers();
+            glBindBuffer(GL_ARRAY_BUFFER, boundVBO);
+            glBufferData(GL_ARRAY_BUFFER, boundBuffer, GL_STATIC_DRAW);
+
+            glVertexAttribPointer(0, 3, GL_FLOAT, false, 3*Float.BYTES, 0);
+            glEnableVertexAttribArray(0);
+
+            memFree(boundBuffer);
         }
     }
 //replaced by my material class

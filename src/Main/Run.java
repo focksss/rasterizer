@@ -9,11 +9,9 @@ import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 
 import java.io.*;
-import java.awt.*;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.joml.Vector3f;
@@ -27,7 +25,6 @@ import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.opengl.GL43.*;
 import static org.lwjgl.opengl.GL45.*;
-import static org.lwjgl.stb.STBImage.*;
 import static org.lwjgl.system.MemoryUtil.*;
 
 import javax.swing.*;
@@ -225,13 +222,17 @@ public class Run {
         glViewport(0, 0, WIDTH, HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        drawScene(outlineShader, false, true);
+        drawScene(outlineShader, false, true, true);
     }
 
     public static void createWorld() {
         //world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", true);
         gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2", true);
+        grassBlock.Nodes.get(0).toggleOutline();
+        //newObject.Nodes.get(newObject.Nodes.size()-1).toggleOutline();
         world.addGLTF(newObject);
+        world.addGLTF(grassBlock);
 
         Light newLight = new Light(1);
         newLight.setProperty("direction", new Vec(.15, -.75, -.5));
@@ -258,7 +259,7 @@ public class Run {
         glClearColor(0.0f, 0.0f, 0.0f, -1);
         glClearTexImage(gPosition, 0, GL_RGBA, GL_FLOAT, new float[]{Float.POSITIVE_INFINITY,0,0,0});
         glEnable(GL_DEPTH_TEST);
-        drawScene(geometryShader, false, false);
+        drawScene(geometryShader, false, false, false);
 
         //ssao generation pass
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);
@@ -740,7 +741,7 @@ public class Run {
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
-    private static void drawScene(Shader shader, boolean doFrustumCull, boolean onlyOutlined) {
+    private static void drawScene(Shader shader, boolean doFrustumCull, boolean onlyOutlined, boolean showBounds) {
         for (World.worldObject obj : world.worldObjects) {
             for (int i = 0; i < obj.numInstances; i++) {
                 shader.setUniform("objectMatrix[" + i + "]", obj.transforms.get(i));
@@ -751,20 +752,26 @@ public class Run {
         }
         for (gLTF gltf : world.worldGLTFs) {
             gLTF.Scene scene = gltf.activeScene;
-            for (gLTF.Node node : scene.nodes) {
-                renderNode(node, new Matrix4f().identity(), shader, doFrustumCull, onlyOutlined);
+            if (gltf.show) {
+                for (gLTF.Node node : scene.nodes) {
+                    renderNode(node, new Matrix4f().identity(), shader, doFrustumCull, onlyOutlined, showBounds, node.outline);
+                }
             }
         }
     }
-    private static void renderNode(gLTF.Node node, Matrix4f parentTransform, Shader shader, boolean doFrustumCull, boolean onlyOutlined) {
+    private static void renderNode(gLTF.Node node, Matrix4f parentTransform, Shader shader, boolean doFrustumCull, boolean onlyOutlined, boolean showBounds, boolean outlined) {
         if (node.show) {
-            if ((!onlyOutlined) || node.outline) {
+            if ((!onlyOutlined) || node.outline || outlined) {
                 if (!(node.mesh == null)) {
                     int i = 0;
                     for (Matrix4f relativeTransform : node.transform) {
                         Matrix4f worldTransform = parentTransform.mul(relativeTransform, new Matrix4f());
                         shader.setUniform("objectMatrix[" + i + "]", worldTransform);
-                        glBindVertexArray(node.mesh.VAO);
+                        if (showBounds) {
+                            glBindVertexArray(node.mesh.boundVAO);
+                        } else {
+                            glBindVertexArray(node.mesh.VAO);
+                        }
                         glEnableVertexAttribArray(0);
                         i++;
                     }
@@ -773,7 +780,7 @@ public class Run {
                 for (Matrix4f relativeTransform : node.transform) {
                     Matrix4f worldTransform = parentTransform.mul(relativeTransform, new Matrix4f());
                     for (gLTF.Node childNode : node.children) {
-                        renderNode(childNode, worldTransform, shader, doFrustumCull, onlyOutlined);
+                        renderNode(childNode, worldTransform, shader, doFrustumCull, onlyOutlined, showBounds, node.outline);
                     }
                 }
             }
@@ -866,7 +873,7 @@ public class Run {
                 shadowShader.setUniform("lightSpaceMatrix", light.lightSpaceMatrix);
 
                 glEnable(GL_DEPTH_TEST);
-                drawScene(shadowShader, false, false);
+                drawScene(shadowShader, false, false, false);
             }
         }
         glCullFace(GL_BACK);

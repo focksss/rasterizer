@@ -353,7 +353,7 @@ void main() {
         vec3 p = thisPosition;
         vec3 albedo = thisMtl.Kd;
         vec3 N = thisNormal;
-        /*
+/*
         if (texCoord.x < 0.166) {
             fragColor = vec4(sin(thisPosition)*0.5 + 0.5, 1); return;
         } else if (texCoord.x < 0.333) {
@@ -365,7 +365,7 @@ void main() {
         } else if (texCoord.x < 0.833){
             fragColor = vec4(thisMtl.Kd, 1); return;
         }
-        */
+*/
         //fragColor = vec4(vec3(thisMtl.d), 1);
         //fragColor = vec4(vec3(thisMtl.map_Kd/101.0), 1);
         //fragColor = vec4(thisMtl.Kd, 1);
