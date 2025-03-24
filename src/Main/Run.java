@@ -32,7 +32,7 @@ import javax.swing.*;
 public class Run {
     public static int
             lightingFBO, lightingTex, lightingRBO,
-            gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal,
+            gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal, gDepth,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
             bloomFBO, PBbloomFBO,
             postProcessingFBO, postProcessingTex, bloomTex,
@@ -227,12 +227,12 @@ public class Run {
 
     public static void createWorld() {
         //world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", true);
+        //gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", true);
         gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2", true);
-        grassBlock.Nodes.get(0).toggleOutline();
+        //grassBlock.Nodes.get(0).toggleOutline();
         //newObject.Nodes.get(newObject.Nodes.size()-1).toggleOutline();
         world.addGLTF(newObject);
-        world.addGLTF(grassBlock);
+        //world.addGLTF(grassBlock);
 
         Light newLight = new Light(1);
         newLight.setProperty("direction", new Vec(.15, -.75, -.5));
@@ -597,13 +597,15 @@ public class Run {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, gViewNormal, 0);
+        gDepth = glGenTextures();
+        glBindTexture(GL_TEXTURE_2D, gDepth);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, WIDTH, HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gDepth, 0);
         int[] gAttachments = new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5};
         glDrawBuffers(gAttachments);
-        gRBO = glGenRenderbuffers();
-        glBindRenderbuffer(GL_RENDERBUFFER, gRBO);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gRBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glReadBuffer(GL_NONE);
 
         postProcessingFBO = glGenFramebuffers();
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
