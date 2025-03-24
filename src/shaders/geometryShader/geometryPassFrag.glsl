@@ -30,9 +30,9 @@ void setGbuffer() {
     if (mapN > -1) {
         vec3 mapN = texture(textures[int(mapN)], vertexTexCoord).rgb; //normal is in color space
         mapN = normalize(mapN * 2 - 1); //normal is in world space
-        mapN = normalize(TBN * mapN);
+        vec3 mapWorldN = normalize(TBN * mapN);
         vec3 mapViewN = normalize(viewTBN * mapN);
-        gNormal = vec4((mapN*0.5)+0.5, 1); //normal in color space
+        gNormal = vec4((mapWorldN*0.5)+0.5, 1); //normal in color space
         gViewNormal = vec4((mapViewN*0.5)+0.5, 1);
         //gNormal = vec4(vertexNormal,1);
     } else {
