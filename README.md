@@ -31,7 +31,11 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Custom vector class (rather than JOML Vec3f)
 - Simple + debug controls
 - Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
-- Simple PBR shading (currently no IBL)
+- PBR shading
+- Equirectangular to cubemap
+- HDRI convoluter
+- IBL
+  - Irradiance mapping
 - Orthographic shadow mapping
 - Fullscreen option and ability to rescale window (reinitializing textures and framebuffers during runtime)
 - Text rendering
@@ -46,9 +50,7 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
   - Optional kernals for blur, deep-fry
  
 ## Soon to be added
-- Screen space reflections
-- IBL, irradiance mapping
-  - Animated HDRI
+- SSR
 - Finish implementing support for multiple shadow maps
 - Skeletal animation
 - SSGI
