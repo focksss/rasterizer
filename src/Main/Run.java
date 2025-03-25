@@ -19,6 +19,7 @@ import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
 import static Util.MathUtil.*;
+import static Util.textureUtil.*;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.ARBFramebufferSRGB.GL_FRAMEBUFFER_SRGB;
 import static org.lwjgl.opengl.GL20.*;
@@ -35,8 +36,8 @@ public class Run {
             gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal, gDepth,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
             PBbloomFBO, SSRfbo,
-            postProcessingFBO, postProcessingTex, bloomTex, SSRtex,
-            skyboxTex,
+            postProcessingFBO, postProcessingTex, SSRtex,
+            skyboxTex, skyboxCubemap, skyboxIrradiance,
             gaussianBlurTexOneHalf, gaussianBlurTex;
     private static int[] gaussianBlurFBO;
     private static int[] bloomMipTextures;
@@ -131,25 +132,29 @@ public class Run {
         world = new World();
         createWorld();
         world.updateWorld();
+        glActiveTexture(GL_TEXTURE0);
         skyboxTex = World.loadTexture(skyboxPath);
+        skyboxCubemap = equirectangularToCubemap(skyboxTex);
+        skyboxIrradiance = convoluteCubemap(skyboxCubemap);
 
-        long frameTime = 1000000000 / FPS; // Nanoseconds per frame
         System.out.println("Initiation complete");
         int frames = 0;
         long lastTime = System.nanoTime();
 
         while (!glfwWindowShouldClose(window)) {
+            long frameTime = 1000000000 / FPS; // Nanoseconds per frame
             long startTime = System.nanoTime();
 
             doFrame();
 
             frames++;
-            double thisFrameTime = (startTime - lastTime) / 1_000_000_000.0;
-            if (thisFrameTime >= 0.5) {
-                currFPS = (float) (frames / thisFrameTime);
+            long thisFrameTime = startTime - lastTime; // Time taken for this frame
+            if (thisFrameTime >= 500000000) { // Update FPS every 0.5 seconds
+                currFPS = (float) (frames / (thisFrameTime / 1000000000.0));
                 frames = 0;
                 lastTime = startTime;
             }
+
             long elapsedTime = System.nanoTime() - startTime;
             long sleepTime = frameTime - elapsedTime;
             if (sleepTime > 0 && CAP_FPS) {
@@ -158,6 +163,9 @@ public class Run {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+            } else {
+                // If the frame took longer than the target, skip sleep
+                // to avoid dropping too many frames and maintaining the cap
             }
         }
         glfwTerminate();
@@ -172,6 +180,7 @@ public class Run {
         updateWorldObjectInstances();
         render();
         doOutlines();
+        //equirectangularToCubemapDemo(skyboxTex);
         doGUI();
 
         glfwSwapBuffers(window);
@@ -199,6 +208,8 @@ public class Run {
                 .setText("Bloom intensity: " + bloomIntensity);
         ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(10)).label
                 .setText("Bloom threshold: " + bloomThreshold);
+        ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(11)).label
+                .setText("Max FPS: " + FPS);
         GUI.objects.get(0).children.get(0).children.get(0).position.y = ((GUI.GUIScroller) GUI.objects.get(0).children.get(0).elements.get(1)).value;
         //GUI.objects.get(0).children.get(0).children.get(0).position.y = 0.25;
         //.65 gets to bottom
@@ -212,6 +223,7 @@ public class Run {
         bloomRadius = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(8)).value;
         bloomIntensity = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(9)).value;
         bloomThreshold = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(10)).value;
+        FPS = (long) ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(11)).value;
     }
     public static void doOutlines() {
         outlineShader.setUniform("viewMatrix", viewMatrix);
@@ -282,13 +294,18 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        skyboxShader.setUniform("projection", projectionMatrix);
+        skyboxShader.setUniform("view", viewMatrix);
+        skyboxShader.setUniformCubemap("environmentMap", skyboxCubemap, 1);
+        renderCube();
         lightingShader.setUniformTexture("gPosition", gPosition, 0);
         lightingShader.setUniformTexture("gNormal", gNormal, 1);
         lightingShader.setUniformTexture("gMaterial", gMaterial, 2);
         lightingShader.setUniformTexture("gTexCoord", gTexCoord, 3);
         lightingShader.setUniformTexture("shadowmaps", world.worldLights.get(0).shadowmapTexture, 4);
         lightingShader.setUniformTexture("SSAOtex", SSAOblurTex, 5);
-        lightingShader.setUniformTexture("skybox", skyboxTex, 6);
+        lightingShader.setUniformTexture("gViewPostion", gViewPosition, 6);
+        lightingShader.setUniformCubemap("irradianceMap", skyboxIrradiance, 7);
         lightingShader.setUniform("FOV", FOV);
         glEnable(GL_FRAMEBUFFER_SRGB);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -298,7 +315,7 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, PBbloomFBO);
         glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
         //set init write
-        downsampleShader.setUniformTexture("srcTexture", bloomTex, 0);
+        downsampleShader.setUniformTexture("srcTexture", lightingTex, 0);
         for (int i = 0; i < 6; i++) {
             int resDiv = (int) Math.pow(2, i);
             glViewport(0, 0, WIDTH/resDiv, HEIGHT/resDiv);
@@ -363,8 +380,6 @@ public class Run {
         lightingShader.setUniform("width", WIDTH);
         lightingShader.setUniform("height", HEIGHT);
         lightingShader.setUniform("SSAO", doSSAO);
-        lightingShader.setUniform("bloom_threshold", bloomThreshold);
-        lightingShader.setUniform("bloom_intensity", bloomIntensity);
         SSAOshader.setUniform("width", WIDTH);
         SSAOshader.setUniform("height", HEIGHT);
         SSAOshader.setUniform("radius", SSAOradius);
@@ -426,7 +441,7 @@ public class Run {
          */
     }
     public static void compileShaders() {
-        skyboxShader = new Shader(shaderPath + "\\skyboxShader\\skyboxFrag.glsl", shaderPath + "\\quadVertex.glsl");
+        skyboxShader = new Shader(shaderPath + "\\skyboxShader\\skyboxFrag.glsl", shaderPath + "\\skyboxShader\\skybox.vert");
         geometryShader = new Shader(shaderPath + "\\geometryShader\\geometryPassFrag.glsl", shaderPath + "\\geometryShader\\geometryPassVert.glsl");
         shadowShader = new Shader(shaderPath + "\\ShadowMapping\\shadowmapFrag.glsl", shaderPath + "\\ShadowMapping\\shadowmapVert.glsl");
         screenShader = new Shader(shaderPath + "\\quadShader\\quadFrag.glsl", shaderPath + "\\quadVertex.glsl");
@@ -510,13 +525,7 @@ public class Run {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lightingTex, 0);
-        bloomTex = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, bloomTex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTex, 0);
-        glDrawBuffers(new int[]{GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
+        glDrawBuffers(GL_COLOR_ATTACHMENT0);
         lightingRBO = glGenRenderbuffers();
         glBindRenderbuffer(GL_RENDERBUFFER, lightingRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIDTH, HEIGHT);
@@ -644,7 +653,7 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, SSRfbo);
         SSRtex = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, SSRtex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemoryUtil.NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, MemoryUtil.NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSRtex, 0);

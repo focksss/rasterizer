@@ -3,7 +3,6 @@
 #extension GL_ARB_gpu_shader_int64 : require
 const float PI = 3.14159265359;
 layout (location = 0) out vec4 fragColor;
-layout (location = 1) out vec4 bloomColor;
 in vec2 texCoord;
 
 uniform bool SSAO;
@@ -12,19 +11,16 @@ uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gMaterial;
 uniform sampler2D gTexCoord;
-uniform sampler2D gViewFragPos;
+uniform sampler2D gViewPosition;
 uniform sampler2D SSAOtex;
 
 uniform vec3 camPos;
 uniform vec3 camRot;
 
 uniform float FOV;
-uniform sampler2D skybox;
+uniform samplerCube irradianceMap;
 uniform int width;
 uniform int height;
-
-uniform float bloom_threshold;
-uniform float bloom_intensity;
 
 //raw mtl data
 layout(std430, binding = 0) buffer mtlBuffer {
@@ -315,34 +311,11 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
     return ggx1 * ggx2;
 }
 
-vec3 getSkyboxCol(float fov, float aspectRatio) {
-    // Convert texture coordinates from [0,1] range to [-1,1] range
-    vec2 screenPos = texCoord * 2.0 - 1.0;
-
-    screenPos.x *= 1.89*aspectRatio;
-
-    float scale = tan(radians(fov) * 0.5);
-    vec3 dir = vec3(screenPos.x * scale, screenPos.y * scale, 1.0);
-
-    dir = normalize(dir);
-
-
-    // Apply camera rotation
-    dir = rotate(dir, camRot*vec3(1, -1, 1));
-
-    // Convert to equirectangular UV mapping
-    float u = atan(dir.z, dir.x) / (2.0 * PI) + 0.5;
-    float v = asin(dir.y) / PI + 0.5;
-
-    // Sample the skybox texture
-    return texture(skybox, vec2(u, 1-v)).rgb;
-}
-
 void main() {
     vec4 initSample = texture(gPosition, texCoord).rgba;
 
     if (isinf(initSample.r)) {
-        fragColor = vec4(getSkyboxCol(100, width/height)*0.5,1);
+        discard;
     } else {
         vec3 thisPosition = initSample.rgb;
         vec3 thisNormal = (texture(gNormal, texCoord).rgb - 0.5) * 2;
@@ -375,11 +348,11 @@ void main() {
         //ambient occlusion
         float ao = texture(SSAOtex, texCoord).r;
         //user-set scene ambient (Sa) approximation
-        float Sa = 0.1;
 	    vec3 F0 = vec3(0.04);
         F0 = mix(F0, albedo, metallic);
+        vec3 irradiance = texture(irradianceMap, N).rgb;
 
-        vec3 Lo = (albedo * Sa * (SSAO ? ao : 1)) + thisMtl.Ke*thisMtl.emissiveStrength; //ambient preset
+        vec3 Lo = (albedo * irradiance * (SSAO ? ao : 1)) + thisMtl.Ke*thisMtl.emissiveStrength; //ambient preset
         vec3 V = normalize(camPos - p);
 	    //approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
         for (int i = 0; i < int(lightData.length()/lightFields); i++) {
@@ -411,11 +384,5 @@ void main() {
             Lo += (kD * albedo / PI + specular) * radiance * NdotL * calculateShadow(l, p, N);
         }
         fragColor = vec4(Lo,1);
-    }
-    float brightness = dot(fragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-    if (brightness > bloom_threshold) {
-        bloomColor = fragColor*bloom_intensity;
-    } else {
-        bloomColor = vec4(0);
     }
 }

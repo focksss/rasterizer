@@ -101,6 +101,7 @@ public class GUI {
         GUILabel bloomRText = new GUILabel(new Vec(0.05, 0.65), "Bloom radius: ", 0.8f, new Vec(1));
         GUILabel bloomIText = new GUILabel(new Vec(0.05, 0.65), "Bloom intensity: ", 0.8f, new Vec(1));
         GUILabel bloomTText = new GUILabel(new Vec(0.05, 0.65), "Bloom threshold: ", 0.8f, new Vec(1));
+        GUILabel fpsCapText = new GUILabel(new Vec(0.05, 0.65), "Max FPS: ", 0.8f, new Vec(1));
 
         GUIButton exit = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), exitText, quad3, Run::Quit, false, false);
         GUIButton recompile = new GUIButton(new Vec(0.05, 0.85), new Vec(0.9, 0.1), recompileText, quad2, Run::compileShaders, false, false);
@@ -113,10 +114,11 @@ public class GUI {
         GUISlider bloomR = new GUISlider(new Vec(0.05, -0.2), new Vec(0.9, 0.1), bloomRText, quad2, 0, 1f, new Vec(1), new Vec(1), Run.bloomRadius);
         GUISlider bloomI = new GUISlider(new Vec(0.05, -0.35), new Vec(0.9, 0.1), bloomIText, quad2, 0, 1f, new Vec(1), new Vec(1), Run.bloomIntensity);
         GUISlider bloomT = new GUISlider(new Vec(0.05, -0.5), new Vec(0.9, 0.1), bloomTText, quad2, 0, 10f, new Vec(1), new Vec(1), Run.bloomThreshold);
+        GUISlider maxFPS = new GUISlider(new Vec(0.05, -0.65), new Vec(0.9, 0.1), fpsCapText, quad2, 1, 240f, new Vec(1), new Vec(1), Run.FPS);
         //
         GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, main::toMouse, true, true);
         GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad4, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
-        scroll.setTotalGUI((1f - (-0.5f)) + 0.05f); // absTop - bottom + buffer space
+        scroll.setTotalGUI((1f - (-0.65f)) + 0.05f); // absTop - bottom + buffer space
 
         main.addElement(quad1);
         main.addElement(moveGUI);
@@ -136,6 +138,7 @@ public class GUI {
         settingsElements.addElement(bloomR);
         settingsElements.addElement(bloomI);
         settingsElements.addElement(bloomT);
+        settingsElements.addElement(maxFPS);
 
         main.addChild(settings);
         main.addChild(fps);

@@ -4,7 +4,6 @@ in vec2 texCoord;
 
 uniform sampler2D ppBuffer;
 uniform sampler2D bloomTex;
-uniform sampler2D skybox;
 
 uniform float exposure;
 uniform float gamma;

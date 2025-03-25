@@ -80,6 +80,11 @@ public class Shader {
         glBindTexture(GL_TEXTURE_2D, texture);
         this.setUniform(name, id);
     }
+    public void setUniformCubemap(String name, int texture, int id) {
+        glActiveTexture(GL_TEXTURE0 + id);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+        this.setUniform(name, id);
+    }
 
     private static int createShader(int type, String source) {
         int shader = glCreateShader(type);
