@@ -7,6 +7,7 @@ import org.joml.Vector3f;
 import org.lwjgl.system.MemoryUtil;
 
 import static org.lwjgl.opengl.GL30.*;
+import static org.lwjgl.opengl.GL32C.GL_TEXTURE_CUBE_MAP_SEAMLESS;
 
 public class textureUtil {
     public static int VAO;
@@ -124,16 +125,8 @@ public class textureUtil {
         }
         return cubemap;
     }
-    public static int convoluteCubemap(int HDRI) {
-        Shader irradianceShader = new Shader("src\\shaders\\envMapConvolution\\envMapConvolution.frag", "src\\shaders\\equirecToCubeShader\\cube.vert");
-
-        VAO = glGenVertexArrays();
-        glBindVertexArray(VAO);
-        VBO = glGenBuffers();
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, false, 8*Float.BYTES, 0);
-        glEnableVertexAttribArray(0);
+    public static int convoluteCubemap(int cubemapHDRI) {
+        Shader irradianceShader = new Shader("src\\shaders\\environmentMapUtil\\envMapConvolution.frag", "src\\shaders\\equirecToCubeShader\\cube.vert");
 
         int irradianceMap = glGenTextures();
         glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
@@ -153,7 +146,7 @@ public class textureUtil {
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, RBO);
 
-        irradianceShader.setUniformCubemap("environmentMap", HDRI, 0);
+        irradianceShader.setUniformCubemap("environmentMap", cubemapHDRI, 0);
         irradianceShader.setUniform("projection", proj);
         glViewport(0,0,32,32);
         glDisable(GL_CULL_FACE);
@@ -163,6 +156,47 @@ public class textureUtil {
             renderCube();
         }
         return irradianceMap;
+    }
+    public static int preFilterCubemap(int cubemapHDRI, int max_reflection_LOD) {
+        Shader prefilterShader = new Shader("src\\shaders\\environmentMapUtil\\envMapPrefilter.frag", "src\\shaders\\equirecToCubeShader\\cube.vert");
+
+        int prefilterMap = glGenTextures();
+        glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+        for (int i = 0; i < 6; i++) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, MemoryUtil.NULL);
+        }
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+        int FBO = glGenFramebuffers();
+        int RBO = glGenRenderbuffers();
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+        prefilterShader.setUniformCubemap("environmentMap", cubemapHDRI, 0);
+        prefilterShader.setUniform("projection", proj);
+        int res = 128;
+        for (int mip = 0; mip < max_reflection_LOD; mip++) {
+            glViewport(0, 0, res, res);
+            glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, res, res);
+
+            float roughness = mip/((float)max_reflection_LOD-1);
+            prefilterShader.setUniform("roughness", roughness);
+            for (int i = 0; i < 6; i++) {
+                prefilterShader.setUniform("view", views[i]);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, prefilterMap, mip);
+                renderCube();
+            }
+            res /= 2;
+        }
+        return prefilterMap;
     }
     public static void renderCube() {
         glBindVertexArray(VAO);

@@ -37,7 +37,7 @@ public class Run {
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
             PBbloomFBO, SSRfbo,
             postProcessingFBO, postProcessingTex, SSRtex,
-            skyboxTex, skyboxCubemap, skyboxIrradiance,
+            skyboxTex, skyboxCubemap, skyboxIrradiance, skyboxPrefiltered, BRDFintegrationMap,
             gaussianBlurTexOneHalf, gaussianBlurTex;
     private static int[] gaussianBlurFBO;
     private static int[] bloomMipTextures;
@@ -64,7 +64,8 @@ public class Run {
     public static float nearPlane = 0.001f, farPlane = 10000.0f;
     public static Matrix4f projectionMatrix;
     public static Matrix4f viewMatrix;
-    public static String skyboxPath = "C:\\Graphics\\assets\\symmetrical_garden_4k.hdr";
+    public static String skyboxPath = "local_resources\\symmetrical_garden_4k.hdr";
+    public static String BRDFintegrationMapPath = "local_resources\\brdf.png";
     private static final String shaderPath = "C:\\Graphics\\rasterizer\\src\\shaders\\";
 
     public static World world;
@@ -134,8 +135,10 @@ public class Run {
         world.updateWorld();
         glActiveTexture(GL_TEXTURE0);
         skyboxTex = World.loadTexture(skyboxPath);
+        BRDFintegrationMap = World.loadTexture(BRDFintegrationMapPath);
         skyboxCubemap = equirectangularToCubemap(skyboxTex);
         skyboxIrradiance = convoluteCubemap(skyboxCubemap);
+        skyboxPrefiltered = preFilterCubemap(skyboxCubemap, 5);
 
         System.out.println("Initiation complete");
         int frames = 0;
@@ -238,8 +241,8 @@ public class Run {
 
     public static void createWorld() {
         //world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        //gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", true);
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\sponzaGLTF", true);
+        gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", true);
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2", true);
         //grassBlock.Nodes.get(0).toggleOutline();
         //newObject.Nodes.get(newObject.Nodes.size()-1).toggleOutline();
         world.addGLTF(newObject);
@@ -306,6 +309,8 @@ public class Run {
         lightingShader.setUniformTexture("SSAOtex", SSAOblurTex, 5);
         lightingShader.setUniformTexture("gViewPostion", gViewPosition, 6);
         lightingShader.setUniformCubemap("irradianceMap", skyboxIrradiance, 7);
+        lightingShader.setUniformCubemap("prefilterMap", skyboxPrefiltered, 8);
+        lightingShader.setUniformTexture("BRDFintegrationMap", BRDFintegrationMap, 9);
         lightingShader.setUniform("FOV", FOV);
         glEnable(GL_FRAMEBUFFER_SRGB);
         glDrawArrays(GL_TRIANGLES, 0, 6);

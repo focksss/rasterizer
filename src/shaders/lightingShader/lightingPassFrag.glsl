@@ -18,9 +18,12 @@ uniform vec3 camPos;
 uniform vec3 camRot;
 
 uniform float FOV;
-uniform samplerCube irradianceMap;
 uniform int width;
 uniform int height;
+
+uniform samplerCube irradianceMap;
+uniform samplerCube prefilterMap;
+uniform sampler2D BRDFintegrationMap;
 
 //raw mtl data
 layout(std430, binding = 0) buffer mtlBuffer {
@@ -281,16 +284,19 @@ float calculateShadow(light l, vec3 fragPos, vec3 normal) {
 vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
 float DistributionGGX(vec3 N, vec3 H, float roughness) {
     float a      = roughness*roughness;
     float a2     = a*a;
     float NdotH  = max(dot(N, H), 0.0);
     float NdotH2 = NdotH*NdotH;
-	
+
     float num   = a2;
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
     denom = PI * denom * denom;
-	
+
     return num / denom;
 }
 float GeometrySchlickGGX(float NdotV, float roughness) {
@@ -299,7 +305,7 @@ float GeometrySchlickGGX(float NdotV, float roughness) {
 
     float num   = NdotV;
     float denom = NdotV * (1.0 - k) + k;
-	
+
     return num / denom;
 }
 float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
@@ -307,7 +313,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
     float NdotL = max(dot(N, L), 0.0);
     float ggx2  = GeometrySchlickGGX(NdotV, roughness);
     float ggx1  = GeometrySchlickGGX(NdotL, roughness);
-	
+
     return ggx1 * ggx2;
 }
 
@@ -326,59 +332,54 @@ void main() {
         vec3 p = thisPosition;
         vec3 albedo = thisMtl.Kd;
         vec3 N = thisNormal;
-/*
-        if (texCoord.x < 0.166) {
-            fragColor = vec4(sin(thisPosition)*0.5 + 0.5, 1); return;
-        } else if (texCoord.x < 0.333) {
-            fragColor = vec4(N*0.5 + 0.5, 1); return;
-        } else if (texCoord.x < 0.5) {
-            fragColor = vec4(thisTexCoord, 0, 1); return;
-        } else if (texCoord.x < 0.666) {
-            fragColor = vec4(vec3(thisMtlID*(1.0/381.0), 1-thisMtlID*(1.0/381.0), 0),1); return;
-        } else if (texCoord.x < 0.833){
-            fragColor = vec4(thisMtl.Kd, 1); return;
-        }
-*/
-        //fragColor = vec4(vec3(thisMtl.d), 1);
-        //fragColor = vec4(vec3(thisMtl.map_Kd/101.0), 1);
-        //fragColor = vec4(thisMtl.Kd, 1);
-        //fragColor = vec4(1);
+        //some messiness with camera space -> world space
+        vec3 V = normalize(camPos*vec3(-1,1,-1) - p);
+        vec3 R = reflect(-V, N);
         float metallic = thisMtl.Pm;
         float roughness = thisMtl.Pr;
-        //ambient occlusion
-        float ao = texture(SSAOtex, texCoord).r;
-        //user-set scene ambient (Sa) approximation
-	    vec3 F0 = vec3(0.04);
-        F0 = mix(F0, albedo, metallic);
-        vec3 irradiance = texture(irradianceMap, N).rgb;
+        float ao = (SSAO ? texture(SSAOtex, texCoord).r : 1);
+        //dependant on max_reflection_LOD of prefilter map, = that - 1
+        const float MAX_REFLECTION_LOD = 4.0;
 
-        vec3 Lo = (albedo * irradiance * (SSAO ? ao : 1)) + thisMtl.Ke*thisMtl.emissiveStrength; //ambient preset
-        vec3 V = normalize(camPos - p);
-	    //approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
+        vec3 irradiance = texture(irradianceMap, N).rgb;
+        vec3 prefilteredColor = textureLod(prefilterMap, R,  roughness * MAX_REFLECTION_LOD).rgb;
+        vec3 F0 = vec3(0.04);
+        F0 = mix(F0, albedo, metallic);
+        vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
+        vec3 kD = 1.0 - kS;
+        kD *= 1.0 - metallic;
+        vec3 diffuse = irradiance * albedo;
+        vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+        vec2 envBRDF = texture(BRDFintegrationMap, vec2(max(dot(N, V), 0.0), roughness)).rg;
+        vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+        vec3 ambient = (kD * diffuse + specular) * ao + thisMtl.emissiveStrength*thisMtl.Ke*3;
+
+        vec3 Lo = ambient + thisMtl.Ke*thisMtl.emissiveStrength; //ambient preset
+        //approximating the hemisphere integral by assuming each vector to light to be a solid angle on the hemisphere
         for (int i = 0; i < int(lightData.length()/lightFields); i++) {
 
             light l = newLight(i);
             vec4 thisLighting = getLighting(l,p);
-	        float atten = thisLighting.w;
-
-            vec3 Wi = thisLighting.xyz;
-	        //Wi = vector from frag to light
-            float cosTheta = max(dot(N, Wi), 0);
-	        //angle between normal and Wi
-            vec3 radiance = l.diffuse * atten;
+            float atten = thisLighting.w;
+            //cull low impact lights
             if (atten < 0.01) continue;
+            //Wi = vector from frag to light
+            vec3 Wi = thisLighting.xyz;
+            //angle between normal and Wi
+            float cosTheta = max(dot(N, Wi), 0);
+            //current lights radiance
+            vec3 radiance = l.diffuse * atten;
 
-	        //radiance of the current light
+            //halfway between vector to cam and light
             vec3 H = normalize(V+Wi);
-	        //halfway between vector to cam and light
             vec3 F = fresnelSchlickRoughness(max(dot(H, V), 0.0), F0, roughness);
             float NDF = DistributionGGX(N, H, roughness);
-            float G   = GeometrySmith(N, V, Wi, roughness);
+            float G = GeometrySmith(N, V, Wi, roughness);
             vec3 numerator = NDF * G * F;
             float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, Wi), 0.0)  + 0.0001;
             vec3 specular = numerator / denominator;
             vec3 kS = F;
-            vec3 kD = vec3(1.0) - kS;
+            vec3 kD = 1.0 - kS;
             kD *= 1.0 - metallic;
             float NdotL = max(dot(N, Wi), 0.0);
             Lo += (kD * albedo / PI + specular) * radiance * NdotL * calculateShadow(l, p, N);
