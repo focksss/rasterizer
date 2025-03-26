@@ -33,9 +33,11 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 - Rendering pipeline allowing for live shader editing, adding/editing objects, adding/editing object instances, adding/editing lights, etc.
 - PBR shading
 - Equirectangular to cubemap
-- HDRI convoluter
+- HDRI convoluter + prefiltering
 - IBL
   - Irradiance mapping
+  - Specular IBL
+  - BRDF integration map
 - Orthographic shadow mapping
 - Fullscreen option and ability to rescale window (reinitializing textures and framebuffers during runtime)
 - Text rendering
