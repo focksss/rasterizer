@@ -241,12 +241,12 @@ public class Run {
 
     public static void createWorld() {
         //world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", true);
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\bistro2", true);
+        gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", false);
+        gLTF newObject = new gLTF("C:\\Graphics\\assets\\sponzaGLTF", true);
         //grassBlock.Nodes.get(0).toggleOutline();
         //newObject.Nodes.get(newObject.Nodes.size()-1).toggleOutline();
         world.addGLTF(newObject);
-        //world.addGLTF(grassBlock);
+        world.addGLTF(grassBlock);
 
         Light newLight = new Light(1);
         newLight.setProperty("direction", new Vec(.15, -.75, -.5));
@@ -273,7 +273,10 @@ public class Run {
         glClearColor(0.0f, 0.0f, 0.0f, -1);
         glClearTexImage(gPosition, 0, GL_RGBA, GL_FLOAT, new float[]{Float.POSITIVE_INFINITY,0,0,0});
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
         drawScene(geometryShader, false, false, false);
+        glDisable(GL_CULL_FACE);
 
         //ssao generation pass
         glBindFramebuffer(GL_FRAMEBUFFER, SSAOfbo);

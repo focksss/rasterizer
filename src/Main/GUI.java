@@ -80,7 +80,7 @@ public class GUI {
         GUIQuad quad3 = new GUIQuad(new Vec(0.8,0.2,0.2));
 
         GUIObject main = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
-        GUIObject settings = new GUIObject(new Vec(0.05,0.2), new Vec(0.9, 0.65));
+        GUIObject settings = new GUIObject(new Vec(0.05,0.2), new Vec(0.6, 0.65));
         GUIObject settingsElements = new GUIObject(new Vec(0,0), new Vec(1, 1), new Vec(0,-10), new Vec(1, 20));
         GUIObject fps = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1));
         GUIObject position = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1));
@@ -120,6 +120,8 @@ public class GUI {
         GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad4, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
         scroll.setTotalGUI((1f - (-0.65f)) + 0.05f); // absTop - bottom + buffer space
 
+        GUISwitch test = new GUISwitch(new Vec(0.5, 0,5), 500, exitText, new Vec(0.1), new Vec(0.5), false, false, false);
+
         main.addElement(quad1);
         main.addElement(moveGUI);
         main.addElement(settingsText);
@@ -143,6 +145,7 @@ public class GUI {
         main.addChild(settings);
         main.addChild(fps);
         main.addChild(position);
+        //main.addElement(test);
 
         fps.addElement(quad2);
         fps.addElement(fpsText);
@@ -234,6 +237,17 @@ public class GUI {
             Vec s2 = l2.add((l1.sub(l2)).mult((percent)*(1-scroller.barSize) + scroller.barSize));
             renderLine(s1, s2, scroller.width, scroller.pointColor);
             scroller.doScroller(mousePos, s1, s2, l1, l2, percent);
+        } else if (element instanceof GUISwitch) {
+            GUISwitch Switch = (GUISwitch) element;
+            Vec pos = localPos.add(localSize.mult(Switch.position));
+            Vec size = localSize.mult(new Vec(Switch.width, Switch.width*0.5f));
+            pos.updateFloats();
+            size.updateFloats();
+            renderLine(pos.add(new Vec(0,Switch.width*0.25f)), pos.add(size).sub(new Vec(0,Switch.width*0.25f)), Switch.width, Switch.lineColor);
+            renderPoint((Switch.toggle ? pos.add(size.mult(0.5)).sub(new Vec(0,Switch.width*0.25f)) : pos.add(new Vec(0,Switch.width*0.25f))), Switch.width, Switch.pointColor);
+            renderLabel(Switch.label, pos, size);
+            renderLine(pos, pos.add(size), 20, Switch.lineColor);
+            Switch.doSwitch(mousePos, pos, pos.add(size));
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -576,6 +590,76 @@ public class GUI {
                 linkedHovered = false;
             }
             value = clamp(value, 0, totalGUI);
+        }
+    }
+    public class GUISwitch {
+        Vec position;
+        float width;
+        GUILabel label;
+        Vec lineColor;
+        Vec pointColor;
+        boolean toggle;
+        boolean holdable;
+        boolean hovered;
+        boolean draggable;
+        private boolean interacted = false;
+        private boolean wasLMBdown = false;
+        private boolean mousePressedInside = false;
+        int ID;
+
+        public GUISwitch(Vec position, float width, GUILabel label, Vec lineColor, Vec pointColor, boolean toggle, boolean holdable, boolean draggable) {
+            this.position = position;
+            this.width = width;
+            this.label = label;
+            this.lineColor = lineColor;
+            this.pointColor = pointColor;
+            this.toggle = toggle;
+            this.holdable = holdable;
+            this.draggable = draggable;
+            ID = interactables++;
+        }
+
+        public void doSwitch(Vec mousePos, Vec switchMin, Vec switchMax) {
+            // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
+            Vec screenSpaceMin = new Vec(switchMin.x * Run.WIDTH, (1 - switchMax.y) * Run.HEIGHT);
+            Vec screenSpaceMax = new Vec(switchMax.x * Run.WIDTH, (1 - switchMin.y) * Run.HEIGHT);
+            Vec span = screenSpaceMax.sub(screenSpaceMin);
+            Vec screenSpaceToggleMin = (toggle ? switchMin.add(new Vec(span.x*0.5, 0)) : screenSpaceMin);
+            Vec screenSpaceToggleMax = (!toggle ? switchMax.sub(new Vec(span.x*0.5, 0)) : screenSpaceMax);
+            hovered = false;
+            boolean insideSwitch = (mousePos.x > screenSpaceToggleMin.x && mousePos.x < screenSpaceToggleMax.x &&
+                    mousePos.y > screenSpaceToggleMin.y && mousePos.y < screenSpaceToggleMax.y);
+            if (insideSwitch) {
+                hovered = true;
+                if (Controller.LMBdown && !wasLMBdown) {
+                    mousePressedInside = true;
+                }
+                if (Controller.LMBdown && mousePressedInside) {
+                    if (!holdable) {
+                        if (mouseInteractingWith == -1 && !interacted) {
+                            toggle = !toggle;
+                            interacted = true;
+                        }
+                    } else {
+                        if (mouseInteractingWith == -1 || mouseInteractingWith == ID) {
+                            mouseInteractingWith = ID;
+                            if (!interacted) {
+                                lastMouse = new Vec(Controller.mousePos.x, Controller.mousePos.y);
+                            }
+                            interacted = true;
+                            toggle = !toggle;
+                        }
+                    }
+                }
+            } else if (mouseInteractingWith == ID && Controller.LMBdown && draggable) {
+                toggle = !toggle;
+            }
+            if (!Controller.LMBdown) {
+                interacted = false;
+                mousePressedInside = false;
+                if (mouseInteractingWith == ID) mouseInteractingWith = -1;
+            }
+            wasLMBdown = Controller.LMBdown;
         }
     }
 

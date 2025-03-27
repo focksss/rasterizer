@@ -22,7 +22,6 @@ Wanted to move to realtime, so started this. loosely followed learnopengl.com to
 <img src="https://github.com/focksss/rasterizer/blob/master/screenshots/screenshot_2025_03_25_15_21_40.png" width="1080">
 
 
-
 ## Current Features
 - Custom .obj and .mtl parser
 - Custom separated gLTF parser
