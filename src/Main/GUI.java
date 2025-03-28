@@ -81,7 +81,9 @@ public class GUI {
 
         GUIObject main = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
         GUIObject settings = new GUIObject(new Vec(0.05,0.2), new Vec(0.6, 0.65));
+        GUIObject toggles = new GUIObject(new Vec(0.7,0.2), new Vec(0.25, 0.65));
         GUIObject settingsElements = new GUIObject(new Vec(0,0), new Vec(1, 1), new Vec(0,-10), new Vec(1, 20));
+        GUIObject togglesElements = new GUIObject(new Vec(0,0), new Vec(1, 1), new Vec(0,-10), new Vec(1, 20));
         GUIObject fps = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1));
         GUIObject position = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1));
 
@@ -94,7 +96,7 @@ public class GUI {
         GUILabel screenshotText = new GUILabel(new Vec(0.1, 0.4), "Take Screenshot", 1, new Vec(1));
         GUILabel exposureText = new GUILabel(new Vec(0.05, 0.65), "Exposure", 0.8f, new Vec(1));
         GUILabel gammaText = new GUILabel(new Vec(0.05, 0.65), "Gamma", 0.8f, new Vec(1));
-        GUILabel exitText = new GUILabel(new Vec(0.1, 0.4), "Exit", 1f, new Vec(0));
+        GUILabel exitText = new GUILabel(new Vec(0.25, 0.15), "Exit", 0.8f, new Vec(0));
         GUILabel FOVtext = new GUILabel(new Vec(0.05, 0.65), "FOV: ", 0.8f, new Vec(1));
         GUILabel SSAOrText = new GUILabel(new Vec(0.05, 0.65), "SSAO radius: ", 0.8f, new Vec(1));
         GUILabel SSAObText = new GUILabel(new Vec(0.05, 0.65), "SSAO bias: ", 0.8f, new Vec(1));
@@ -102,8 +104,12 @@ public class GUI {
         GUILabel bloomIText = new GUILabel(new Vec(0.05, 0.65), "Bloom intensity: ", 0.8f, new Vec(1));
         GUILabel bloomTText = new GUILabel(new Vec(0.05, 0.65), "Bloom threshold: ", 0.8f, new Vec(1));
         GUILabel fpsCapText = new GUILabel(new Vec(0.05, 0.65), "Max FPS: ", 0.8f, new Vec(1));
+        GUILabel togglesText = new GUILabel(new Vec(0.7, 0.9), "Toggles", 1.5f, new Vec(1));
+        GUILabel SSAOtext = new GUILabel(new Vec(-3, -0.15), "Do SSAO", 0.6f, new Vec(1));
+        GUILabel borderlessText = new GUILabel(new Vec(-3, 0.65), "Borderless Fullscreen", 0.5f, new Vec(1));
+        GUILabel bloomText = new GUILabel(new Vec(-3, -0.15), "Do Bloom", 0.5f, new Vec(1));
 
-        GUIButton exit = new GUIButton(new Vec(0.8, 0.9), new Vec(0.15, 0.05), exitText, quad3, Run::Quit, false, false);
+        GUIButton exit = new GUIButton(new Vec(0.85, 0.95), new Vec(0.15, 0.025), exitText, quad3, Run::Quit, false, false);
         GUIButton recompile = new GUIButton(new Vec(0.05, 0.85), new Vec(0.9, 0.1), recompileText, quad2, Run::compileShaders, false, false);
         GUIButton screenshot = new GUIButton(new Vec(0.05, 0.7), new Vec(0.9, 0.1), screenshotText, quad2, Controller::screenshot, false, false);
         GUISlider exposure = new GUISlider(new Vec(0.05, 0.55), new Vec(0.9, 0.1), exposureText, quad2, 0, 30, new Vec(1), new Vec(1), Run.EXPOSURE);
@@ -117,17 +123,20 @@ public class GUI {
         GUISlider maxFPS = new GUISlider(new Vec(0.05, -0.65), new Vec(0.9, 0.1), fpsCapText, quad2, 1, 240f, new Vec(1), new Vec(1), Run.FPS);
         //
         GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, main::toMouse, true, true);
-        GUIScroller scroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad4, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
-        scroll.setTotalGUI((1f - (-0.65f)) + 0.05f); // absTop - bottom + buffer space
+        GUIScroller settingsScroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad4, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
+        settingsScroll.setTotalGUI((1f - (-0.65f)) + 0.05f); // absTop - bottom + buffer space
 
-        GUISwitch test = new GUISwitch(new Vec(0.5, 0,5), 500, exitText, new Vec(0.1), new Vec(0.5), false, false, false);
+        GUISwitch SSAO = new GUISwitch(new Vec(0.65, 0.95), 0.2f, SSAOtext, new Vec(0.1), new Vec(0.5), Run.doSSAO, false, false);
+        GUISwitch borderless = new GUISwitch(new Vec(0.65, 0.85), 0.2f, borderlessText, new Vec(0.1), new Vec(0.5), Run.borderless_fullscreen, false, false);
+        GUISwitch bloom = new GUISwitch(new Vec(0.65, 0.75), 0.2f, bloomText, new Vec(0.1), new Vec(0.5), Run.doBloom, false, false);
 
         main.addElement(quad1);
         main.addElement(moveGUI);
         main.addElement(settingsText);
         main.addElement(exit);
+        main.addElement(togglesText);
         settings.addElement(quad4);
-        settings.addElement(scroll);
+        settings.addElement(settingsScroll);
         settings.addChild(settingsElements);
         settingsElements.addElement(recompile);
         settingsElements.addElement(recompile);
@@ -141,11 +150,17 @@ public class GUI {
         settingsElements.addElement(bloomI);
         settingsElements.addElement(bloomT);
         settingsElements.addElement(maxFPS);
+        settings.addChild(settingsElements);
+        toggles.addElement(quad4);
+        togglesElements.addElement(SSAO);
+        togglesElements.addElement(borderless);
+        togglesElements.addElement(bloom);
+        toggles.addChild(togglesElements);
 
         main.addChild(settings);
         main.addChild(fps);
         main.addChild(position);
-        //main.addElement(test);
+        main.addChild(toggles);
 
         fps.addElement(quad2);
         fps.addElement(fpsText);
@@ -232,7 +247,6 @@ public class GUI {
             Vec l2 = pos.add(size.mult(new Vec(0.5, 0.95)));
             renderLine(l1, l2, scroller.width, scroller.lineColor);
             double percent = (scroller.value - scroller.Lbound) / ((scroller.totalGUI - scroller.Lbound));
-            Vec pointPos = l2.add((l1.sub(l2)).mult(percent));
             Vec s1 = l2.add((l1.sub(l2)).mult((percent)*(1-scroller.barSize)));
             Vec s2 = l2.add((l1.sub(l2)).mult((percent)*(1-scroller.barSize) + scroller.barSize));
             renderLine(s1, s2, scroller.width, scroller.pointColor);
@@ -240,14 +254,15 @@ public class GUI {
         } else if (element instanceof GUISwitch) {
             GUISwitch Switch = (GUISwitch) element;
             Vec pos = localPos.add(localSize.mult(Switch.position));
-            Vec size = localSize.mult(new Vec(Switch.width, Switch.width*0.5f));
+            Vec size = localSize.mult(new Vec(Switch.width, Switch.width * 0.25));
+            Vec sizeX = new Vec(size.x, 0);
             pos.updateFloats();
             size.updateFloats();
-            renderLine(pos.add(new Vec(0,Switch.width*0.25f)), pos.add(size).sub(new Vec(0,Switch.width*0.25f)), Switch.width, Switch.lineColor);
-            renderPoint((Switch.toggle ? pos.add(size.mult(0.5)).sub(new Vec(0,Switch.width*0.25f)) : pos.add(new Vec(0,Switch.width*0.25f))), Switch.width, Switch.pointColor);
+            float pixelWidth = size.xF*Run.WIDTH;
+            renderLine(pos.add(new Vec(0,0)), pos.add(sizeX), pixelWidth, Switch.lineColor);
+            renderPoint((Switch.toggle ? pos.add(sizeX) : pos), pixelWidth, Switch.pointColor);
             renderLabel(Switch.label, pos, size);
-            renderLine(pos, pos.add(size), 20, Switch.lineColor);
-            Switch.doSwitch(mousePos, pos, pos.add(size));
+            Switch.doSwitch(mousePos, pos.sub(new Vec(size.x*0.5, size.x)), pos.add(sizeX).add(new Vec(size.x*0.75, size.x)));
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -624,8 +639,8 @@ public class GUI {
             Vec screenSpaceMin = new Vec(switchMin.x * Run.WIDTH, (1 - switchMax.y) * Run.HEIGHT);
             Vec screenSpaceMax = new Vec(switchMax.x * Run.WIDTH, (1 - switchMin.y) * Run.HEIGHT);
             Vec span = screenSpaceMax.sub(screenSpaceMin);
-            Vec screenSpaceToggleMin = (toggle ? switchMin.add(new Vec(span.x*0.5, 0)) : screenSpaceMin);
-            Vec screenSpaceToggleMax = (!toggle ? switchMax.sub(new Vec(span.x*0.5, 0)) : screenSpaceMax);
+            Vec screenSpaceToggleMin = (toggle ? screenSpaceMin.add(new Vec(span.x*0.5, 0)) : screenSpaceMin);
+            Vec screenSpaceToggleMax = (!toggle ? screenSpaceMax.sub(new Vec(span.x*0.5, 0)) : screenSpaceMax);
             hovered = false;
             boolean insideSwitch = (mousePos.x > screenSpaceToggleMin.x && mousePos.x < screenSpaceToggleMax.x &&
                     mousePos.y > screenSpaceToggleMin.y && mousePos.y < screenSpaceToggleMax.y);
