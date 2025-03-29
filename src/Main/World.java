@@ -24,16 +24,19 @@ import static org.lwjgl.opengl.ARBBindlessTexture.*;
 import static org.lwjgl.opengl.ARBUniformBufferObject.glBindBufferBase;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL45.*;
+import static org.lwjgl.opengl.GL46C.GL_MAX_TEXTURE_MAX_ANISOTROPY;
+import static org.lwjgl.opengl.GL46C.GL_TEXTURE_MAX_ANISOTROPY;
 import static org.lwjgl.stb.STBImage.stbi_image_free;
 import static org.lwjgl.stb.STBImage.stbi_load;
 import static org.lwjgl.system.MemoryUtil.*;
 
 public class World {
-    public List<gLTF> worldGLTFs = new ArrayList<>();
+    public static List<gLTF> worldGLTFs = new ArrayList<>();
     public List<worldObject> worldObjects = new ArrayList<>();
     public List<worldLight> worldLights = new ArrayList<>();
     private List<Material> worldMaterials = new ArrayList<>();
     private List<String> texturePaths = new ArrayList<>();
+    private List<Long> worldTextureHandles = new ArrayList<>();
 
     public int materialSSBO, textureHandleSSBO, lightDataSSBO, shadowmapHandleSSBO;
 
@@ -46,7 +49,6 @@ public class World {
         FloatBuffer materialData = memAllocFloat((int) numMatParams * worldMaterials.size() + 1);
         materialData.put(numMatParams);
         for (Material material : worldMaterials) {
-            System.out.print("\rparsing material: " + material.name);
             for (Field field : material.getClass().getDeclaredFields()) {
                 if (!(field.getName().equals("name") || field.getName().equals("texturesDirectory"))) {
                     field.setAccessible(true);
@@ -76,14 +78,7 @@ public class World {
         memFree(materialData);
 
         LongBuffer textureHandles = memAllocLong(texturePaths.size());
-        int counter = 0;
-        for (String path : texturePaths) {
-            counter++;
-            System.out.print("\rloading texture (" + counter + "/" + texturePaths.size() + ") from " + path + "...");
-            int textureID = loadTexture(path);
-
-            long handle = glGetTextureHandleARB(textureID);
-            glMakeTextureHandleResidentARB(handle);
+        for (Long handle : worldTextureHandles) {
             textureHandles.put(handle);
             if (!glIsTextureHandleResidentARB(handle)) {
                 System.err.println("texture handle is not resident: " + handle);
@@ -123,7 +118,6 @@ public class World {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightDataSSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER, lightData, GL_STATIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, lightDataSSBO);
-        System.out.println(lightData.capacity() / 22);
         memFree(lightData);
 
         LongBuffer shadowmapHandles = MemoryUtil.memAllocLong(worldLights.size());
@@ -188,11 +182,14 @@ public class World {
                 assert image != null;
             }
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width.get(0), height.get(0), 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-            glGenerateMipmap(GL_TEXTURE_2D);
             glTextureParameteri(textureID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glGenerateMipmap(GL_TEXTURE_2D);
+
+            float maxAniso = glGetFloat(GL_MAX_TEXTURE_MAX_ANISOTROPY);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, maxAniso);
 
             stbi_image_free(image);
             MemoryUtil.memFree(width);
@@ -278,14 +275,23 @@ public class World {
         worldMaterials.addAll(object.mtllib);
         int lastNumMats = worldMaterials.size();
         worldMaterials.addAll(object.mtllib);
+        int counter = 0;
+        int numTextures = object.texturePaths.size();
         for (String texPath : object.texturePaths) {
+            System.out.print("\rParsing texture " + counter + "/" + numTextures + " " + texPath);
             if(!texturePaths.contains(texPath)) {
                 texturePaths.add(texPath);
+                int texture = loadTexture(texPath);
+                long handle = glGetTextureHandleARB(texture);
+                glMakeTextureHandleResidentARB(handle);
+                worldTextureHandles.add(handle);
             }
+            counter++;
         }
         for (gLTF.Mesh mesh : object.Meshes) {
             mesh.initialize(lastNumMats);
         }
+        System.out.println();
     }
     public void addLightsForObject(worldObject obj, float minDist) {
         Obj object = obj.object;

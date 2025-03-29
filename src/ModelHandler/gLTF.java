@@ -78,7 +78,13 @@ public class gLTF {
             JSONArray bufferViews = gltf.getJSONArray("bufferViews");
             for (int i = 0; i < bufferViews.length(); i++) {
                 JSONObject bufferView = bufferViews.getJSONObject(i);
-                Buffer buffer = Buffers.get(bufferView.getInt("buffer"));
+                Buffer buffer = null;
+                try {
+                    buffer = Buffers.get(bufferView.getInt("buffer"));
+                } catch (IndexOutOfBoundsException e) {
+                    System.err.println("Buffer index out of bounds: " + bufferView.getInt("buffer"));
+                    e.printStackTrace();
+                }
                 int byteLength = bufferView.getInt("byteLength");
                 int byteOffset = 0;
                 if (bufferView.has("byteOffset")) byteOffset = bufferView.getInt("byteOffset");
@@ -90,7 +96,13 @@ public class gLTF {
             JSONArray accessors = gltf.getJSONArray("accessors");
             for (int i = 0; i < accessors.length(); i++) {
                 JSONObject accessor = accessors.getJSONObject(i);
-                BufferView bufferView = BufferViews.get(accessor.getInt("bufferView"));
+                BufferView bufferView = null;
+                try {
+                    bufferView = BufferViews.get(accessor.getInt("bufferView"));
+                } catch (IndexOutOfBoundsException e) {
+                    System.err.println("Buffer index out of bounds: " + accessor.getInt("bufferView"));
+                    e.printStackTrace();
+                }
                 int componentType = accessor.getInt("componentType");
                 int count = accessor.getInt("count");
                 String type = accessor.getString("type");
@@ -169,7 +181,12 @@ public class gLTF {
             JSONArray scenes = gltf.getJSONArray("scenes");
             for (int i = 0; i < scenes.length(); i++) {
                 JSONObject scene = scenes.getJSONObject(i);
-                String name = scene.getString("name");
+                String name = "";
+                try {
+                    name = scene.getString("name");
+                } catch (Exception e) {
+                    System.out.println("Error " + e);
+                }
                 JSONArray sceneNodes = scene.getJSONArray("nodes");
                 List<Node> nodesList = new ArrayList<>();
                 for (int j = 0; j < sceneNodes.length(); j++) {
@@ -265,7 +282,8 @@ public class gLTF {
 
             constructPrimitives();
         } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
+            System.err.println("Fatal error in parsing: ");
+            e.printStackTrace();
         }
     }
 
@@ -350,9 +368,19 @@ public class gLTF {
                         continue;
                     }
 
-                    Vec v1 = positions.get(idx1);
-                    Vec v2 = positions.get(idx2);
-                    Vec v3 = positions.get(idx3);
+                    Vec v1 = new Vec();
+                    Vec v2 = new Vec();
+                    Vec v3 = new Vec();
+                    try {
+                        v1 = positions.get(idx1);
+                        v2 = positions.get(idx2);
+                        v3 = positions.get(idx3);
+                    } catch (Exception e) {
+                        if (idx1 >= positions.size() || idx2 >= positions.size() || idx3 >= positions.size()) {
+                            System.err.println("Invalid index: " + idx1 + ", " + idx2 + ", " + idx3);
+                            continue;
+                        }
+                    }
 
                     Vec n1 = normals.isEmpty() ? new Vec(0, 0, 1) : normals.get(idx1);
                     Vec n2 = normals.isEmpty() ? new Vec(0, 0, 1) : normals.get(idx2);

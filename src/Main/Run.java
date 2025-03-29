@@ -51,7 +51,7 @@ public class Run {
     public static float
             EXPOSURE, GAMMA, SSAOradius, SSAObias, bloomRadius, bloomIntensity, bloomThreshold,
             FOV;
-    public static boolean doSSAO = true; static boolean CAP_FPS = true; public static boolean borderless_fullscreen = true; public static boolean doBloom = true;
+    public static boolean doSSAO = true; static boolean CAP_FPS = true; public static boolean borderless_fullscreen = true; public static boolean doBloom = true; public static boolean doShadows = true; public static boolean doSSR = false;
 
     public static long startTime = System.nanoTime();
     static float currFPS = 0;
@@ -81,6 +81,7 @@ public class Run {
     public static void main(String[] args) throws IOException {
         loadSave();
         init();
+        world = new World();
         gui = new GUI();
         compileShaders();
         controller = new Controller(camPos, camRot, window);
@@ -231,6 +232,8 @@ public class Run {
         doSSAO = ((GUI.GUISwitch) GUI.objects.get(0).children.get(3).children.get(0).elements.get(0)).toggle;
         borderless_fullscreen = ((GUI.GUISwitch) GUI.objects.get(0).children.get(3).children.get(0).elements.get(1)).toggle;
         doBloom = ((GUI.GUISwitch) GUI.objects.get(0).children.get(3).children.get(0).elements.get(2)).toggle;
+        doShadows = ((GUI.GUISwitch) GUI.objects.get(0).children.get(3).children.get(0).elements.get(3)).toggle;
+        doSSR = ((GUI.GUISwitch) GUI.objects.get(0).children.get(3).children.get(0).elements.get(4)).toggle;
     }
     public static void doOutlines() {
         outlineShader.setUniform("viewMatrix", viewMatrix);
@@ -244,13 +247,14 @@ public class Run {
     }
 
     public static void createWorld() {
-        //world.addObject("C:\\Graphics\\assets\\sphere", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", false);
+        //world.addObject("C:\\Graphics\\assets\\classroom", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
+        //world.worldObjects.get(0).newInstance();
+        //gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", false);
         gLTF newObject = new gLTF("C:\\Graphics\\assets\\sponzaGLTF", true);
         //grassBlock.Nodes.get(0).toggleOutline();
         //newObject.Nodes.get(newObject.Nodes.size()-1).toggleOutline();
         world.addGLTF(newObject);
-        world.addGLTF(grassBlock);
+        //world.addGLTF(grassBlock);
 
         Light newLight = new Light(1);
         newLight.setProperty("direction", new Vec(.15, -.75, -.5));
@@ -269,7 +273,7 @@ public class Run {
         world.addLightsForScene(newObject, 0, 0.5f);
     }
     public static void render() {
-        generateShadowMaps();
+        if (doShadows) generateShadowMaps();
         //geometry pass
         glBindFramebuffer(GL_FRAMEBUFFER, gFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
@@ -300,6 +304,16 @@ public class Run {
             blurShader.setUniformTexture("blurInput", SSAOtex, 0);
             glDrawArrays(GL_TRIANGLES, 0, 6);
         }
+        if (doSSR) {
+            //SSR pass
+            glBindFramebuffer(GL_FRAMEBUFFER, SSRfbo);
+            glViewport(0, 0, WIDTH, HEIGHT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            SSRshader.setUniformTexture("gViewPosition", gViewPosition, 0);
+            SSRshader.setUniformTexture("gViewNormal", gViewNormal, 1);
+            SSRshader.setUniform("projectionMatrix", projectionMatrix);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
         //lighting pass
         glBindFramebuffer(GL_FRAMEBUFFER, lightingFBO);
         glViewport(0, 0, WIDTH, HEIGHT);
@@ -308,6 +322,8 @@ public class Run {
         skyboxShader.setUniform("view", viewMatrix);
         skyboxShader.setUniformCubemap("environmentMap", skyboxCubemap, 1);
         renderCube();
+        lightingShader.setUniform("shadows", doShadows);
+        lightingShader.setUniform("SSR", doSSR);
         lightingShader.setUniformTexture("gPosition", gPosition, 0);
         lightingShader.setUniformTexture("gNormal", gNormal, 1);
         lightingShader.setUniformTexture("gMaterial", gMaterial, 2);
@@ -318,6 +334,7 @@ public class Run {
         lightingShader.setUniformCubemap("irradianceMap", skyboxIrradiance, 7);
         lightingShader.setUniformCubemap("prefilterMap", skyboxPrefiltered, 8);
         lightingShader.setUniformTexture("BRDFintegrationMap", BRDFintegrationMap, 9);
+        lightingShader.setUniformTexture("SSRtex", SSRtex, 10);
         lightingShader.setUniform("FOV", FOV);
         glEnable(GL_FRAMEBUFFER_SRGB);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -349,15 +366,6 @@ public class Run {
                 glDrawArrays(GL_TRIANGLES, 0, 6);
             }
         }
-/*
-        glBindFramebuffer(GL_FRAMEBUFFER, SSRfbo);
-        glViewport(0, 0, WIDTH, HEIGHT);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        SSRshader.setUniformTexture("gViewPosition", gViewPosition, 0);
-        SSRshader.setUniformTexture("gViewNormal", gViewNormal, 1);
-        SSRshader.setUniform("projectionMatrix", projectionMatrix);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-*/
 
         //post process
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessingFBO);
@@ -440,29 +448,6 @@ public class Run {
         glEnable(GL_MULTISAMPLE);
         glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glEnable(GL_STENCIL_TEST);
-        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-
-
-        JFrame frame = new JFrame("Console Output");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(400, 400);
-
-        /*
-        textArea = new JTextArea(5, 30);
-        textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
-        textArea.setEditable(false);
-
-        frame.add(new JScrollPane(textArea));
-        frame.setVisible(true);
-
-        print("Position: ");
-        print("FPS: ");
-        print("");
-        print("");
-        print("");
-        print("");
-         */
     }
     public static void compileShaders() {
         skyboxShader = new Shader(shaderPath + "\\skyboxShader\\skyboxFrag.glsl", shaderPath + "\\skyboxShader\\skybox.vert");
@@ -677,7 +662,7 @@ public class Run {
         glBindFramebuffer(GL_FRAMEBUFFER, SSRfbo);
         SSRtex = glGenTextures();
         glBindTexture(GL_TEXTURE_2D, SSRtex);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, MemoryUtil.NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, WIDTH, HEIGHT, 0, GL_RGBA, GL_FLOAT, MemoryUtil.NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, SSRtex, 0);
@@ -751,18 +736,24 @@ public class Run {
 
     private static void drawScene(Shader shader, boolean doFrustumCull, boolean onlyOutlined, boolean showBounds) {
         for (World.worldObject obj : world.worldObjects) {
-            for (int i = 0; i < obj.numInstances; i++) {
-                shader.setUniform("objectMatrix[" + i + "]", obj.transforms.get(i));
+            int i = 0;
+            for (int j = 0; j < obj.numInstances; j++) {
+                if (!onlyOutlined || obj.outlined.get(j)) {
+                    shader.setUniform("objectMatrix[" + i + "]", obj.transforms.get(j));
+                    i++;
+                }
             }
             glBindVertexArray(obj.VAO);
             glEnableVertexAttribArray(0);
-            glDrawArraysInstanced(GL_TRIANGLES, 0, obj.triCount * 3, obj.numInstances);
+            glDrawArraysInstanced(GL_TRIANGLES, 0, obj.triCount * 3, i);
         }
         for (gLTF gltf : world.worldGLTFs) {
-            gLTF.Scene scene = gltf.activeScene;
-            if (gltf.show) {
-                for (gLTF.Node node : scene.nodes) {
-                    renderNode(node, new Matrix4f().identity(), shader, doFrustumCull, onlyOutlined, showBounds, node.outline);
+            if (!(gltf.Nodes.isEmpty())) {
+                gLTF.Scene scene = gltf.activeScene;
+                if (gltf.show) {
+                    for (gLTF.Node node : scene.nodes) {
+                        renderNode(node, new Matrix4f().identity(), shader, doFrustumCull, onlyOutlined, showBounds, node.outline);
+                    }
                 }
             }
         }
@@ -869,6 +860,7 @@ public class Run {
 
     private static void generateShadowMaps() {
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
         glCullFace(GL_FRONT_FACE);
         for (World.worldLight wLight : world.worldLights) {
             if (wLight.light.type == 1) {
@@ -923,6 +915,12 @@ public class Run {
         writer.newLine();
         writer.write("Borderless_fullscreen: " + borderless_fullscreen);
         writer.newLine();
+        writer.write("Do_Shadows: " + doShadows);
+        writer.newLine();
+        writer.write("Do_Bloom: " + doBloom);
+        writer.newLine();
+        writer.write("Do_SSR: " + doSSR);
+        writer.newLine();
         writer.close();
     }
     public static void loadSave() {
@@ -976,6 +974,15 @@ public class Run {
                             break;
                         case ("Borderless_fullscreen:"):
                             borderless_fullscreen = Boolean.parseBoolean(l[1]);
+                            break;
+                        case ("Do_Shadows:"):
+                            doShadows = Boolean.parseBoolean(l[1]);
+                            break;
+                        case ("Do_Bloom:"):
+                            doBloom = Boolean.parseBoolean(l[1]);
+                            break;
+                        case ("Do_SSR:"):
+                            doSSR = Boolean.parseBoolean(l[1]);
                             break;
                     }
                 }

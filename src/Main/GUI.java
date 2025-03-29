@@ -2,15 +2,19 @@ package Main;
 
 import Datatypes.Shader;
 import Datatypes.Vec;
+import ModelHandler.gLTF;
 import Util.IOUtil;
 
 import static Main.Controller.mousePos;
+import static Main.Run.world;
 import static Util.MathUtil.*;
 
 import org.lwjgl.stb.STBTTAlignedQuad;
 import org.lwjgl.stb.STBTTBakedChar;
 import org.lwjgl.system.MemoryStack;
 
+import javax.swing.*;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -25,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import java.util.*;
+import java.util.List;
 
 import static Util.IOUtil.resizeBuffer;
 import static org.lwjgl.BufferUtils.createByteBuffer;
@@ -36,7 +41,7 @@ import static org.lwjgl.stb.STBTruetype.*;
 import static org.lwjgl.system.MemoryUtil.memSlice;
 
 /**
- * This effectively mimics the gLTF data structure,
+ * This is mimicking the heirarchal structure of the gLTF format,
  * the GUI contains GUI objects,
  * each GUI object can contain children GUI objects,
  * a GUI object can contain children and GUI elements.
@@ -79,13 +84,16 @@ public class GUI {
         GUIQuad quad2 = new GUIQuad(new Vec(0.2));
         GUIQuad quad3 = new GUIQuad(new Vec(0.8,0.2,0.2));
 
-        GUIObject main = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
+        GUIObject options = new GUIObject(new Vec(0.1, 0.1), new Vec(0.3, 0.8));
         GUIObject settings = new GUIObject(new Vec(0.05,0.2), new Vec(0.6, 0.65));
         GUIObject toggles = new GUIObject(new Vec(0.7,0.2), new Vec(0.25, 0.65));
         GUIObject settingsElements = new GUIObject(new Vec(0,0), new Vec(1, 1), new Vec(0,-10), new Vec(1, 20));
         GUIObject togglesElements = new GUIObject(new Vec(0,0), new Vec(1, 1), new Vec(0,-10), new Vec(1, 20));
         GUIObject fps = new GUIObject(new Vec(0.05, 0.05), new Vec(0.25, 0.1));
         GUIObject position = new GUIObject(new Vec(0.35, 0.05), new Vec(0.6, 0.1));
+        //
+        GUIObject world = new GUIObject(new Vec(0.6, 0.05), new Vec(0.2, 0.5));
+        GUILabel addGLTFtext = new GUILabel(new Vec(0.05,0.9), "Add gLTF: ", 0.8f, new Vec(1));
 
         GUILabel emptyText = new GUILabel(new Vec(), "", 0f, new Vec());
         GUILabel fpsText = new GUILabel(new Vec(0.05, 0.4), "", 1f, new Vec(1));
@@ -108,6 +116,8 @@ public class GUI {
         GUILabel SSAOtext = new GUILabel(new Vec(-3, -0.15), "Do SSAO", 0.6f, new Vec(1));
         GUILabel borderlessText = new GUILabel(new Vec(-3, 0.65), "Borderless Fullscreen", 0.5f, new Vec(1));
         GUILabel bloomText = new GUILabel(new Vec(-3, -0.15), "Do Bloom", 0.5f, new Vec(1));
+        GUILabel shadowText = new GUILabel(new Vec(-3, -0.15), "Do Shadows", 0.5f, new Vec(1));
+        GUILabel SSRtext = new GUILabel(new Vec(-3, -0.15), "Do SSR", 0.5f, new Vec(1));
 
         GUIButton exit = new GUIButton(new Vec(0.85, 0.95), new Vec(0.15, 0.025), exitText, quad3, Run::Quit, false, false);
         GUIButton recompile = new GUIButton(new Vec(0.05, 0.85), new Vec(0.9, 0.1), recompileText, quad2, Run::compileShaders, false, false);
@@ -122,19 +132,26 @@ public class GUI {
         GUISlider bloomT = new GUISlider(new Vec(0.05, -0.5), new Vec(0.9, 0.1), bloomTText, quad2, 0, 10f, new Vec(1), new Vec(1), Run.bloomThreshold);
         GUISlider maxFPS = new GUISlider(new Vec(0.05, -0.65), new Vec(0.9, 0.1), fpsCapText, quad2, 1, 240f, new Vec(1), new Vec(1), Run.FPS);
         //
-        GUIButton moveGUI = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, main::toMouse, true, true);
+        GUIButton moveOptions = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, options::toMouse, true, true);
+        GUIButton moveWorld = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, world::toMouse, true, true);
         GUIScroller settingsScroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad4, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
         settingsScroll.setTotalGUI((1f - (-0.65f)) + 0.05f); // absTop - bottom + buffer space
 
         GUISwitch SSAO = new GUISwitch(new Vec(0.65, 0.95), 0.2f, SSAOtext, new Vec(0.1), new Vec(0.5), Run.doSSAO, false, false);
         GUISwitch borderless = new GUISwitch(new Vec(0.65, 0.85), 0.2f, borderlessText, new Vec(0.1), new Vec(0.5), Run.borderless_fullscreen, false, false);
         GUISwitch bloom = new GUISwitch(new Vec(0.65, 0.75), 0.2f, bloomText, new Vec(0.1), new Vec(0.5), Run.doBloom, false, false);
+        GUISwitch shadows = new GUISwitch(new Vec(0.65, 0.65), 0.2f, shadowText, new Vec(0.1), new Vec(0.5), Run.doShadows, false, false);
+        GUISwitch SSR = new GUISwitch(new Vec(0.65, 0.55), 0.2f, SSRtext, new Vec(0.1), new Vec(0.5), Run.doSSR, false, false);
 
-        main.addElement(quad1);
-        main.addElement(moveGUI);
-        main.addElement(settingsText);
-        main.addElement(exit);
-        main.addElement(togglesText);
+        GUILabel selectorText = new GUILabel(new Vec(0.05, 0.2), "Click to select file", 0.5f, new Vec(1));
+        List<Runnable> addGLTFactions = new ArrayList<>(); addGLTFactions.add(() -> Run.world.addGLTF(new gLTF(selectorText.text, true))); addGLTFactions.add(Run.world::updateWorld);
+        GUISelect test = new GUISelect(new Vec(0.325, 0.89), new Vec(0.625,0.05), selectorText, quad4, addGLTFactions, false, false);
+
+        options.addElement(quad1);
+        options.addElement(moveOptions);
+        options.addElement(settingsText);
+        options.addElement(exit);
+        options.addElement(togglesText);
         settings.addElement(quad4);
         settings.addElement(settingsScroll);
         settings.addChild(settingsElements);
@@ -155,19 +172,28 @@ public class GUI {
         togglesElements.addElement(SSAO);
         togglesElements.addElement(borderless);
         togglesElements.addElement(bloom);
+        togglesElements.addElement(shadows);
+        togglesElements.addElement(SSR);
         toggles.addChild(togglesElements);
 
-        main.addChild(settings);
-        main.addChild(fps);
-        main.addChild(position);
-        main.addChild(toggles);
+        options.addChild(settings);
+        options.addChild(fps);
+        options.addChild(position);
+        options.addChild(toggles);
 
         fps.addElement(quad2);
         fps.addElement(fpsText);
         position.addElement(quad2);
         position.addElement(posText);
 
-        objects.add(main);
+        world.addElement(quad1);
+        world.addElement(moveWorld);
+        world.addElement(addGLTFtext);
+        world.addElement(test);
+
+        objects.add(options);
+        objects.add(world);
+
     }
 
     public static void renderGUI() {
@@ -263,6 +289,15 @@ public class GUI {
             renderPoint((Switch.toggle ? pos.add(sizeX) : pos), pixelWidth, Switch.pointColor);
             renderLabel(Switch.label, pos, size);
             Switch.doSwitch(mousePos, pos.sub(new Vec(size.x*0.5, size.x)), pos.add(sizeX).add(new Vec(size.x*0.75, size.x)));
+        } else if (element instanceof GUISelect) {
+            GUISelect selector = (GUISelect) element;
+            Vec pos = localPos.add(localSize.mult(selector.position));
+            Vec size = localSize.mult(selector.size);
+            pos.updateFloats();
+            size.updateFloats();
+            renderQuad(pos, size, selector.quad.color.mult(selector.hovered ? 1.1 : 1));
+            renderLabel(selector.label, pos, size);
+            selector.doSelect(mousePos, pos, pos.add(size));
         }
     }
     private static void renderQuad(GUIQuad quad, Vec localPos, Vec localSize) {
@@ -431,6 +466,99 @@ public class GUI {
             for (Runnable action : actions) {
                 action.run();
             }
+        }
+    }
+    public static class GUISelect {
+        Vec position;
+        Vec size;
+        GUILabel label;
+        GUIQuad quad;
+        List<Runnable> actions;
+        boolean holdable;
+        boolean hovered;
+        boolean draggable;
+        private boolean interacted = false;
+        private boolean wasLMBdown = false;
+        private boolean mousePressedInside = false;
+        int ID;
+
+        public GUISelect(Vec position, Vec size, GUILabel label, GUIQuad quad, List<Runnable> actions, boolean holdable, boolean draggable) {
+            this.position = position;
+            this.size = size;
+            this.label = label;
+            this.quad = quad;
+            this.actions = actions;
+            this.holdable = holdable;
+            this.draggable = draggable;
+            ID = interactables++;
+        }
+        public GUISelect(Vec position, Vec size, GUILabel label, GUIQuad quad, Runnable actions, boolean holdable, boolean draggable) {
+            this.actions = new ArrayList<>();
+            this.position = position;
+            this.size = size;
+            this.label = label;
+            this.quad = quad;
+            this.actions.add(actions);
+            this.holdable = holdable;
+            this.draggable = draggable;
+            ID = interactables++;
+        }
+
+        public void doSelect(Vec mousePos, Vec buttonMin, Vec buttonMax) {
+            // Map normalized bottom left 0,0 with up right size to pixel coordinates with top left 0,0
+            Vec screenSpaceMin = new Vec(buttonMin.x * Run.WIDTH, (1 - buttonMax.y) * Run.HEIGHT);
+            Vec screenSpaceMax = new Vec(buttonMax.x * Run.WIDTH, (1 - buttonMin.y) * Run.HEIGHT);
+            hovered = false;
+            boolean insideButton = (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x &&
+                    mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y);
+            if (insideButton) {
+                hovered = true;
+                if (Controller.LMBdown && !wasLMBdown) {
+                    mousePressedInside = true;
+                }
+                if (Controller.LMBdown && mousePressedInside) {
+                    if (!holdable) {
+                        if (mouseInteractingWith == -1 && !interacted) {
+                            runAllActions();
+                            interacted = true;
+                        }
+                    } else {
+                        if (mouseInteractingWith == -1 || mouseInteractingWith == ID) {
+                            mouseInteractingWith = ID;
+                            if (!interacted) {
+                                lastMouse = new Vec(Controller.mousePos.x, Controller.mousePos.y);
+                            }
+                            interacted = true;
+                            runAllActions();
+                        }
+                    }
+                }
+            } else if (mouseInteractingWith == ID && Controller.LMBdown && draggable) {
+                runAllActions();
+            }
+            if (!Controller.LMBdown) {
+                interacted = false;
+                mousePressedInside = false;
+                if (mouseInteractingWith == ID) mouseInteractingWith = -1;
+            }
+            wasLMBdown = Controller.LMBdown;
+        }
+        private void runAllActions() {
+            String chosen = null;
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+
+            int result = fileChooser.showOpenDialog(null);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File selectedFile = fileChooser.getSelectedFile();
+                chosen = selectedFile.getAbsolutePath();
+            }
+            this.label.setText(chosen);
+            for (Runnable action : actions) {
+                action.run();
+            }
+            world.addGLTF(new gLTF(chosen, true));
+            world.updateWorld();
         }
     }
     public class GUIQuad {
