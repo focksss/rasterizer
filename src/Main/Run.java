@@ -35,7 +35,7 @@ import javax.swing.*;
 public class Run {
     public static int
             lightingFBO, lightingTex, lightingRBO,
-            gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gRBO, gViewNormal, gDepth,
+            gFBO, gPosition, gNormal, gMaterial, gTexCoord, gViewPosition, gViewNormal, gDepth,
             SSAOfbo, SSAOblurFBO, SSAOtex, SSAOblurTex, SSAOnoiseTex,
             PBbloomFBO, SSRfbo,
             postProcessingFBO, postProcessingTex, SSRtex,
@@ -249,17 +249,18 @@ public class Run {
             selectedR.updateFloats();
             selectedS.updateFloats();
             Matrix4f reconstructedMatrix = new Matrix4f();
-            reconstructedMatrix.scaling(selectedS.toVec3f());
             Quaternionf userRotQuat = new Quaternionf().rotationXYZ(
                     (float) Math.toRadians(selectedR.xF),
                     (float) Math.toRadians(selectedR.yF),
                     (float) Math.toRadians(selectedR.zF)
             );
-            reconstructedMatrix.rotate(userRotQuat);
             reconstructedMatrix.setTranslation(selectedL.toVec3f());
+            reconstructedMatrix.rotate(userRotQuat);
+            reconstructedMatrix.scale(selectedS.toVec3f());
 
             World.selectedNode.transform.set(0, reconstructedMatrix);
         }
+
     }
     public static void doOutlines() {
         outlineShader.setUniform("viewMatrix", viewMatrix);

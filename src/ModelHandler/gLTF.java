@@ -151,18 +151,18 @@ public class gLTF {
                 JSONObject node = nodes.getJSONObject(i);
                 String name = node.getString("name");
                 Matrix4f transform = new Matrix4f().identity();
-                if (node.has("scale")) {
-                    JSONArray scale = node.getJSONArray("scale");
-                    transform.scale(scale.getNumber(0).floatValue(), scale.getNumber(1).floatValue(), scale.getNumber(2).floatValue());
+                if (node.has("translation")) {
+                    JSONArray translation = node.getJSONArray("translation");
+                    transform.translate(translation.getNumber(0).floatValue(), translation.getNumber(1).floatValue(), translation.getNumber(2).floatValue());
                 }
                 if (node.has("rotation")) {
                     JSONArray rotation = node.getJSONArray("rotation");
                     Quaternionf quaternionRotation = new Quaternionf(rotation.getNumber(0).floatValue(), rotation.getNumber(1).floatValue(), rotation.getNumber(2).floatValue(), rotation.getNumber(3).floatValue());
                     transform.rotate(quaternionRotation);
                 }
-                if (node.has("translation")) {
-                    JSONArray translation = node.getJSONArray("translation");
-                    transform.translate(translation.getNumber(0).floatValue(), translation.getNumber(1).floatValue(), translation.getNumber(2).floatValue());
+                if (node.has("scale")) {
+                    JSONArray scale = node.getJSONArray("scale");
+                    transform.scale(scale.getNumber(0).floatValue(), scale.getNumber(1).floatValue(), scale.getNumber(2).floatValue());
                 }
                 Mesh mesh = null;
                 if (node.has("mesh")) mesh = Meshes.get(node.getInt("mesh"));

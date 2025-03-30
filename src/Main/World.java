@@ -280,28 +280,35 @@ public class World {
         selectedNode = node;
         selectedNode.toggleOutline();
         Matrix4f matrix = selectedNode.transform.get(0);
+
+// Step 1: Extract translation
         selectedL = new Vec(matrix.m30(), matrix.m31(), matrix.m32());
 
-        selectedS = new Vec(
-                new Vec(matrix.m00(), matrix.m01(), matrix.m02()).magnitude(),
-                new Vec(matrix.m10(), matrix.m11(), matrix.m12()).magnitude(),
-                new Vec(matrix.m20(), matrix.m21(), matrix.m22()).magnitude()
-        );
+// Step 2: Extract scale FIRST
+        Vec scaleX = new Vec(matrix.m00(), matrix.m01(), matrix.m02());
+        Vec scaleY = new Vec(matrix.m10(), matrix.m11(), matrix.m12());
+        Vec scaleZ = new Vec(matrix.m20(), matrix.m21(), matrix.m22());
+
+        selectedS = new Vec(scaleX.magnitude(), scaleY.magnitude(), scaleZ.magnitude());
         selectedS.updateFloats();
+
+// Step 3: Extract rotation AFTER scaling is removed
         Matrix3f rotMat = new Matrix3f(
                 matrix.m00() / selectedS.xF, matrix.m01() / selectedS.xF, matrix.m02() / selectedS.xF,
                 matrix.m10() / selectedS.yF, matrix.m11() / selectedS.yF, matrix.m12() / selectedS.yF,
                 matrix.m20() / selectedS.zF, matrix.m21() / selectedS.zF, matrix.m22() / selectedS.zF
         );
+
+// Step 4: Convert to quaternion and extract Euler angles
         Quaternionf rotationQuat = new Quaternionf();
         rotationQuat.setFromNormalized(rotMat);
 
         Vector3f eulerRad = new Vector3f();
         rotationQuat.getEulerAnglesXYZ(eulerRad);
         selectedR = new Vec(
-                (float)Math.toDegrees(eulerRad.x),
-                (float)Math.toDegrees(eulerRad.y),
-                (float)Math.toDegrees(eulerRad.z)
+                (float) Math.toDegrees(eulerRad.x),
+                (float) Math.toDegrees(eulerRad.y),
+                (float) Math.toDegrees(eulerRad.z)
         );
         selectedR.updateFloats();
 
@@ -316,6 +323,8 @@ public class World {
         ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(6)).value = selectedS.xF;
         ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(7)).value = selectedS.yF;
         ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(8)).value = selectedS.zF;
+
+
     }
     public void deselect() {
         selectedNode.toggleOutline();
