@@ -577,7 +577,9 @@ public class GUI {
         }
         private void runAllActions() {
             String chosen = null;
+
             JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setCurrentDirectory(new File("C:\\"));
             fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 
             int result = fileChooser.showOpenDialog(null);
