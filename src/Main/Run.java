@@ -4,6 +4,7 @@ import Datatypes.Shader;
 import ModelHandler.gLTF;
 import Datatypes.Vec;
 import ModelHandler.Light;
+import org.joml.Quaternionf;
 import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
@@ -18,6 +19,7 @@ import org.joml.Vector3f;
 import org.joml.Matrix4f;
 import org.lwjgl.system.MemoryUtil;
 
+import static Main.World.*;
 import static Util.MathUtil.*;
 import static Util.textureUtil.*;
 import static org.lwjgl.glfw.GLFW.*;
@@ -131,17 +133,16 @@ public class Run {
         glfwTerminate();
     }
     public static void runEngine() {
-        world = new World();
-        createWorld();
-        world.updateWorld();
         glActiveTexture(GL_TEXTURE0);
         skyboxTex = World.loadTexture(skyboxPath);
         BRDFintegrationMap = World.loadTexture(BRDFintegrationMapPath);
         skyboxCubemap = equirectangularToCubemap(skyboxTex);
         skyboxIrradiance = convoluteCubemap(skyboxCubemap);
         skyboxPrefiltered = preFilterCubemap(skyboxCubemap, 5);
-
         System.out.println("Initiation complete");
+
+        createWorld();
+
         int frames = 0;
         long lastTime = System.nanoTime();
 
@@ -214,10 +215,8 @@ public class Run {
                 .setText("Bloom threshold: " + bloomThreshold);
         ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(11)).label
                 .setText("Max FPS: " + FPS);
-        GUI.objects.get(0).children.get(0).children.get(0).position.y = ((GUI.GUIScroller) GUI.objects.get(0).children.get(0).elements.get(1)).value;
+        //GUI.objects.get(0).children.get(0).children.get(0).position.y = ((GUI.GUIScroller) GUI.objects.get(0).children.get(0).elements.get(1)).value;
         //GUI.objects.get(0).children.get(0).children.get(0).position.y = 0.25;
-        //.65 gets to bottom
-        //.525 to 2nd to bottom
         if (Controller.escaped) GUI.renderGUI();
         EXPOSURE = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(3)).value;
         GAMMA = ((GUI.GUISlider) GUI.objects.get(0).children.get(0).children.get(0).elements.get(4)).value;
@@ -234,6 +233,33 @@ public class Run {
         doBloom = ((GUI.GUISwitch) GUI.objects.get(0).children.get(3).children.get(0).elements.get(2)).toggle;
         doShadows = ((GUI.GUISwitch) GUI.objects.get(0).children.get(3).children.get(0).elements.get(3)).toggle;
         doSSR = ((GUI.GUISwitch) GUI.objects.get(0).children.get(3).children.get(0).elements.get(4)).toggle;
+
+        if (!(selectedNode == null)) {
+            selectedL.x = ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(0)).value;
+            selectedL.y = ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(1)).value;
+            selectedL.z = ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(2)).value;
+            selectedR.x = ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(3)).value;
+            selectedR.y = ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(4)).value;
+            selectedR.z = ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(5)).value;
+            selectedS.x = ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(6)).value;
+            selectedS.y = ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(7)).value;
+            selectedS.z = ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(8)).value;
+
+            selectedL.updateFloats();
+            selectedR.updateFloats();
+            selectedS.updateFloats();
+            Matrix4f reconstructedMatrix = new Matrix4f();
+            reconstructedMatrix.scaling(selectedS.toVec3f());
+            Quaternionf userRotQuat = new Quaternionf().rotationXYZ(
+                    (float) Math.toRadians(selectedR.xF),
+                    (float) Math.toRadians(selectedR.yF),
+                    (float) Math.toRadians(selectedR.zF)
+            );
+            reconstructedMatrix.rotate(userRotQuat);
+            reconstructedMatrix.setTranslation(selectedL.toVec3f());
+
+            World.selectedNode.transform.set(0, reconstructedMatrix);
+        }
     }
     public static void doOutlines() {
         outlineShader.setUniform("viewMatrix", viewMatrix);
@@ -243,19 +269,10 @@ public class Run {
         glViewport(0, 0, WIDTH, HEIGHT);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        drawScene(outlineShader, false, true, true);
+        drawScene(outlineShader, false, true, false);
     }
 
     public static void createWorld() {
-        //world.addObject("C:\\Graphics\\assets\\classroom", new Vec(1), new Vec(0, 0, 0), new Vec(0), "bistro");
-        //world.worldObjects.get(0).newInstance();
-        //gLTF grassBlock = new gLTF("C:\\Graphics\\assets\\grassblockGLTF", false);
-        gLTF newObject = new gLTF("C:\\Graphics\\assets\\sponzaGLTF", true);
-        //grassBlock.Nodes.get(0).toggleOutline();
-        //newObject.Nodes.get(newObject.Nodes.size()-1).toggleOutline();
-        world.addGLTF(newObject);
-        //world.addGLTF(grassBlock);
-
         Light newLight = new Light(1);
         newLight.setProperty("direction", new Vec(.15, -.75, -.5));
         newLight.setProperty("position", new Vec(0.1, 1, 0.05).mult(50));
@@ -269,8 +286,7 @@ public class Run {
         newLight.setProperty("specular", new Vec(1, 1, 1));
         world.addLight(newLight);
 
-        //world.addLightsForObject(world.worldObjects.get(0), 0.5f);
-        world.addLightsForScene(newObject, 0, 0.5f);
+        world.updateWorld();
     }
     public static void render() {
         if (doShadows) generateShadowMaps();
@@ -776,11 +792,11 @@ public class Run {
                     }
                     glDrawArraysInstanced(GL_TRIANGLES, 0, node.mesh.triCount * 3, node.transform.size());
                 }
-                for (Matrix4f relativeTransform : node.transform) {
-                    Matrix4f worldTransform = parentTransform.mul(relativeTransform, new Matrix4f());
-                    for (gLTF.Node childNode : node.children) {
-                        renderNode(childNode, worldTransform, shader, doFrustumCull, onlyOutlined, showBounds, node.outline);
-                    }
+            }
+            for (Matrix4f relativeTransform : node.transform) {
+                Matrix4f worldTransform = parentTransform.mul(relativeTransform, new Matrix4f());
+                for (gLTF.Node childNode : node.children) {
+                    renderNode(childNode, worldTransform, shader, doFrustumCull, onlyOutlined, showBounds, node.outline);
                 }
             }
         }

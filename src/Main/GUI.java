@@ -7,6 +7,7 @@ import Util.IOUtil;
 
 import static Main.Controller.mousePos;
 import static Main.Run.world;
+import static Util.IOUtil.ioResourceToByteBuffer;
 import static Util.MathUtil.*;
 
 import org.lwjgl.stb.STBTTAlignedQuad;
@@ -16,29 +17,19 @@ import org.lwjgl.system.MemoryStack;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import java.util.*;
 import java.util.List;
 
-import static Util.IOUtil.resizeBuffer;
 import static org.lwjgl.BufferUtils.createByteBuffer;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.stb.STBTruetype.*;
-import static org.lwjgl.system.MemoryUtil.memSlice;
 
 /**
  * This is mimicking the heirarchal structure of the gLTF format,
@@ -134,7 +125,7 @@ public class GUI {
         //
         GUIButton moveOptions = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, options::toMouse, true, true);
         GUIButton moveWorld = new GUIButton(new Vec(0, 0.975), new Vec(1, 0.025), emptyText, quad2, world::toMouse, true, true);
-        GUIScroller settingsScroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad4, 0, settings, new Vec(0.1), new Vec(0.2), 0, 8);
+        GUIScroller settingsScroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.9), emptyText, quad4, 0, settings, settingsElements, new Vec(0.1), new Vec(0.2), 0, 8);
         settingsScroll.setTotalGUI((1f - (-0.65f)) + 0.05f); // absTop - bottom + buffer space
 
         GUISwitch SSAO = new GUISwitch(new Vec(0.65, 0.95), 0.2f, SSAOtext, new Vec(0.1), new Vec(0.5), Run.doSSAO, false, false);
@@ -145,7 +136,31 @@ public class GUI {
 
         GUILabel selectorText = new GUILabel(new Vec(0.05, 0.2), "Click to select file", 0.5f, new Vec(1));
         List<Runnable> addGLTFactions = new ArrayList<>(); addGLTFactions.add(() -> Run.world.addGLTF(new gLTF(selectorText.text, true))); addGLTFactions.add(Run.world::updateWorld);
-        GUISelect test = new GUISelect(new Vec(0.325, 0.89), new Vec(0.625,0.05), selectorText, quad4, addGLTFactions, false, false);
+        GUISelect addgLTF = new GUISelect(new Vec(0.325, 0.89), new Vec(0.625,0.05), selectorText, quad4, addGLTFactions, false, false);
+        GUIButton deselect = new GUIButton(new Vec(0.05, 0.35), new Vec(0.45, 0.05), new GUILabel(new Vec(0.1, 0.4), "Deselect", 0.5f, new Vec(1)), quad2, Run.world::deselect, false, false);
+        GUIObject scene = new GUIObject(new Vec(0.05, 0.4), new Vec(0.9, 0.4));
+        scene.addElement(quad4);
+        GUIObject sceneElements = new GUIObject(new Vec(0), new Vec(1), new Vec(0,-10), new Vec(1, 20));
+        scene.addChild(sceneElements);
+        GUIScroller sceneScroll = new GUIScroller(new Vec(0.95, 0.4), new Vec(0.05, 0.4), emptyText, quad4, 0, scene, sceneElements, new Vec(0.1), new Vec(0.2), 0, 8);
+        sceneScroll.setTotalGUI((1f - (-1f)) + 0.05f); // absTop - bottom + buffer space
+
+        GUIObject modify = new GUIObject(new Vec(0.05, 0.05), new Vec(0.9, 0.3));
+        modify.addElement(quad4);
+        GUIObject modifyElements = new GUIObject(new Vec(0), new Vec(1), new Vec(0,-10), new Vec(1, 20));
+        modify.addChild(modifyElements);
+        GUIScroller modifyScroll = new GUIScroller(new Vec(0.95, 0.05), new Vec(0.05, 0.3), emptyText, quad4, 0, modify, modifyElements, new Vec(0.1), new Vec(0.2), 0, 8);
+        modifyScroll.setTotalGUI((1f - (-1.25f)) + 0.05f); // absTop - bottom + buffer space
+        GUISlider Lx = new GUISlider(new Vec(0.05, 0.75), new Vec(0.9, 0.2), "Location x:", new GUILabel(new Vec(0.05, 0.65), "", 0.8f, new Vec(1)), quad2, -20, 20, new Vec(1), new Vec(1), (float) World.selectedL.x);
+        GUISlider Ly = new GUISlider(new Vec(0.05, 0.5), new Vec(0.9, 0.2), "Location y:",new GUILabel(new Vec(0.05, 0.65), "", 0.8f, new Vec(1)), quad2, -20, 20, new Vec(1), new Vec(1), (float) World.selectedL.y);
+        GUISlider Lz = new GUISlider(new Vec(0.05, 0.25), new Vec(0.9, 0.2), "Location z:", new GUILabel(new Vec(0.05, 0.65), "", 0.8f, new Vec(1)), quad2, -20, 20, new Vec(1), new Vec(1), (float) World.selectedL.z);
+        GUISlider Rx = new GUISlider(new Vec(0.05, 0.0), new Vec(0.9, 0.2), "Rotation x:", new GUILabel(new Vec(0.05, 0.65), "", 0.8f, new Vec(1)), quad2, -180, 180, new Vec(1), new Vec(1), (float) World.selectedR.x);
+        GUISlider Ry = new GUISlider(new Vec(0.05, -0.25), new Vec(0.9, 0.2), "Rotation y: ", new GUILabel(new Vec(0.05, 0.65), "", 0.8f, new Vec(1)), quad2, -180, 180, new Vec(1), new Vec(1), (float) World.selectedR.y);
+        GUISlider Rz = new GUISlider(new Vec(0.05, -0.5), new Vec(0.9, 0.2), "Rotation z:", new GUILabel(new Vec(0.05, 0.65), "", 0.8f, new Vec(1)), quad2, -180, 180, new Vec(1), new Vec(1), (float) World.selectedR.z);
+        GUISlider Sx = new GUISlider(new Vec(0.05, -0.75), new Vec(0.9, 0.2), "Scale x:", new GUILabel(new Vec(0.05, 0.65), "", 0.8f, new Vec(1)), quad2, 0, 5f, new Vec(1), new Vec(1), (float) World.selectedS.x);
+        GUISlider Sy = new GUISlider(new Vec(0.05, -1), new Vec(0.9, 0.2), "Scale y:", new GUILabel(new Vec(0.05, 0.65), "", 0.8f, new Vec(1)), quad2, 0, 5f, new Vec(1), new Vec(1), (float) World.selectedS.y);
+        GUISlider Sz = new GUISlider(new Vec(0.05, -1.25), new Vec(0.9, 0.2), "Scale z:", new GUILabel(new Vec(0.05, 0.65), "", 0.8f, new Vec(1)), quad2, 0, 5f, new Vec(1), new Vec(1), (float) World.selectedS.z);
+        modifyElements.addElement(Lx); modifyElements.addElement(Ly); modifyElements.addElement(Lz); modifyElements.addElement(Rx); modifyElements.addElement(Ry); modifyElements.addElement(Rz); modifyElements.addElement(Sx); modifyElements.addElement(Sy); modifyElements.addElement(Sz);
 
         options.addElement(quad1);
         options.addElement(moveOptions);
@@ -189,7 +204,12 @@ public class GUI {
         world.addElement(quad1);
         world.addElement(moveWorld);
         world.addElement(addGLTFtext);
-        world.addElement(test);
+        world.addElement(addgLTF);
+        world.addChild(scene);
+        world.addElement(sceneScroll);
+        world.addChild(modify);
+        world.addElement(modifyScroll);
+        world.addElement(deselect);
 
         objects.add(options);
         objects.add(world);
@@ -222,8 +242,12 @@ public class GUI {
         for (Object element : object.elements) {
             renderElement(element, localPos, localSize);
         }
-        for (GUIObject child : object.children) {
-            renderObject(child, localPos, localSize, localClipMin, localClipMax);
+        if (object.showChildren) {
+            for (GUIObject child : object.children) {
+                if (child.show) {
+                    renderObject(child, localPos, localSize, localClipMin, localClipMax);
+                }
+            }
         }
     }
     private static void setClipBounds(Vec clipMin, Vec clipMax) {
@@ -274,7 +298,7 @@ public class GUI {
             renderLine(l1, l2, scroller.width, scroller.lineColor);
             double percent = (scroller.value - scroller.Lbound) / ((scroller.totalGUI - scroller.Lbound));
             Vec s1 = l2.add((l1.sub(l2)).mult((percent)*(1-scroller.barSize)));
-            Vec s2 = l2.add((l1.sub(l2)).mult((percent)*(1-scroller.barSize) + scroller.barSize));
+            Vec s2 = l2.add((l1.sub(l2)).mult(clamp((percent)*(1-scroller.barSize) + scroller.barSize, 0, 1)));
             renderLine(s1, s2, scroller.width, scroller.pointColor);
             scroller.doScroller(mousePos, s1, s2, l1, l2, percent);
         } else if (element instanceof GUISwitch) {
@@ -340,6 +364,8 @@ public class GUI {
         List<GUIObject> children = new ArrayList<>();
         List<Object> elements = new ArrayList<>();
         boolean hovered;
+        boolean show = true;
+        boolean showChildren = true;
 
         public GUIObject(Vec position, Vec size, Vec clipPosition, Vec clipSize) {
             this.position = position;
@@ -369,6 +395,12 @@ public class GUI {
             Vec screenSpaceMax = new Vec(max.x * Run.WIDTH, (1 - min.y) * Run.HEIGHT);
             hovered = (mousePos.x > screenSpaceMin.x && mousePos.x < screenSpaceMax.x &&
                     mousePos.y > screenSpaceMin.y && mousePos.y < screenSpaceMax.y);
+        }
+        public void toggleShow() {
+            show = !show;
+        }
+        public void toggleChildren() {
+            showChildren = !showChildren;
         }
     }
     public static class GUILabel {
@@ -552,16 +584,14 @@ public class GUI {
             if (result == JFileChooser.APPROVE_OPTION) {
                 File selectedFile = fileChooser.getSelectedFile();
                 chosen = selectedFile.getAbsolutePath();
+                this.label.setText(chosen);
+                for (Runnable action : actions) {
+                    action.run();
+                }
             }
-            this.label.setText(chosen);
-            for (Runnable action : actions) {
-                action.run();
-            }
-            world.addGLTF(new gLTF(chosen, true));
-            world.updateWorld();
         }
     }
-    public class GUIQuad {
+    public static class GUIQuad {
         Vec position;
         Vec size;
         Vec color;
@@ -580,6 +610,7 @@ public class GUI {
     public class GUISlider {
         Vec position;
         Vec size;
+        String text;
         GUILabel label;
         GUIQuad quad;
         float Lbound;
@@ -593,6 +624,19 @@ public class GUI {
         public GUISlider(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, float Rbound, Vec lineColor, Vec pointColor, float startValue) {
             this.position = position;
             this.size = size;
+            this.label = label;
+            this.quad = quad;
+            this.Lbound = Lbound;
+            this.Rbound = Rbound;
+            this.lineColor = lineColor;
+            this.pointColor = pointColor;
+            this.value = startValue;
+            ID = interactables++;
+        }
+        public GUISlider(Vec position, Vec size, String text, GUILabel label, GUIQuad quad, float Lbound, float Rbound, Vec lineColor, Vec pointColor, float startValue) {
+            this.position = position;
+            this.size = size;
+            this.text = text;
             this.label = label;
             this.quad = quad;
             this.Lbound = Lbound;
@@ -638,6 +682,7 @@ public class GUI {
             } else {
                 held = false;
             }
+            if (!(text == null)) label.setText(text + " " + value);
         }
     }
     public class GUIScroller {
@@ -646,6 +691,7 @@ public class GUI {
         GUILabel label;
         GUIQuad quad;
         GUIObject linked;
+        GUIObject linkedToMove;
         float Lbound;
         public float value;
         float width;
@@ -661,13 +707,14 @@ public class GUI {
         private double scrollRawStart;
         int ID;
 
-        public GUIScroller(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, GUIObject linked, Vec lineColor, Vec pointColor, float startValue, float width) {
+        public GUIScroller(Vec position, Vec size, GUILabel label, GUIQuad quad, float Lbound, GUIObject linked, GUIObject linkedToMove, Vec lineColor, Vec pointColor, float startValue, float width) {
             this.position = position;
             this.size = size;
             this.label = label;
             this.quad = quad;
             this.Lbound = Lbound;
             this.linked = linked;
+            this.linkedToMove = linkedToMove;
             this.lineColor = lineColor;
             this.pointColor = pointColor;
             this.value = startValue;
@@ -677,6 +724,7 @@ public class GUI {
         void setTotalGUI(float totalGUI) {
             this.totalGUI = (float) (totalGUI-1);
             this.barSize = (float) ((linked.clipSize.y/linked.size.y)/totalGUI);
+//            System.out.println((linked.clipSize.y/linked.size.y) + " " + totalGUI);
         }
 
         public void doScroller(Vec mousePos, Vec s1, Vec s2, Vec l1, Vec l2, double percent) {
@@ -733,6 +781,7 @@ public class GUI {
                 linkedHovered = false;
             }
             value = clamp(value, 0, totalGUI);
+            linkedToMove.position.y = value;
         }
     }
     public class GUISwitch {
@@ -941,43 +990,6 @@ public class GUI {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        }
-
-        // Utility method to load resources
-        public static ByteBuffer ioResourceToByteBuffer(String resource, int bufferSize) throws IOException {
-            ByteBuffer buffer;
-
-            Path path = resource.startsWith("http") ? null : Paths.get(resource);
-            if (path != null && Files.isReadable(path)) {
-                try (SeekableByteChannel fc = Files.newByteChannel(path)) {
-                    buffer = createByteBuffer((int)fc.size() + 1);
-                    while (fc.read(buffer) != -1) {
-                        ;
-                    }
-                }
-            } else {
-                try (
-                        InputStream source = resource.startsWith("http")
-                                ? new URL(resource).openStream()
-                                : IOUtil.class.getClassLoader().getResourceAsStream(resource);
-                        ReadableByteChannel rbc = Channels.newChannel(source)
-                ) {
-                    buffer = createByteBuffer(bufferSize);
-
-                    while (true) {
-                        int bytes = rbc.read(buffer);
-                        if (bytes == -1) {
-                            break;
-                        }
-                        if (buffer.remaining() == 0) {
-                            buffer = resizeBuffer(buffer, buffer.capacity() * 3 / 2); // 50%
-                        }
-                    }
-                }
-            }
-
-            buffer.flip();
-            return memSlice(buffer);
         }
     }
 }

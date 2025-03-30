@@ -37,6 +37,7 @@ public class gLTF {
     public List<Accessor> Accessors = new ArrayList<>();
     public List<BufferView> BufferViews = new ArrayList<>();
     public List<Buffer> Buffers = new ArrayList<>();
+    public String name;
 
     public boolean show = true;
 
@@ -57,6 +58,7 @@ public class gLTF {
                 File[] gltfs = gltfDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".gltf"));
                 assert gltfs != null;
                 gltfFile = gltfs[0];
+                this.name = gltfFile.getName();
             }
 
         //get gltf content
@@ -397,9 +399,12 @@ public class gLTF {
         }
     }
 
+    public void toggleHidden() {
+        show = !show;
+    }
 
     public class Scene {
-        String name;
+        public String name;
         public List<Node> nodes;
 
         public Scene(String name, List<Node> nodes) {

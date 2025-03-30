@@ -68,6 +68,12 @@ public class Vec {
         this.y = Double.parseDouble(v);
     }
 
+    public Vec(Vector3f eulerAnglesXYZ) {
+        x = eulerAnglesXYZ.x;
+        y = eulerAnglesXYZ.y;
+        z = eulerAnglesXYZ.z;
+    }
+
     public void updateFloats() {
         xf = (float) x; yf = (float) y; zf = (float) z; wf = (float) w;
         xF = (float) x; yF = (float) y; zF = (float) z; wF = (float) w;

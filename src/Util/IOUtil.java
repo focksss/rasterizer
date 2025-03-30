@@ -1,3 +1,5 @@
+// Manually imported from LWJGL source code
+
 /**
  * https://github.com/LWJGL/lwjgl3/blob/master/modules/samples/src/test/java/org/lwjgl/demo/util/IOUtil.java
  */
@@ -26,7 +28,6 @@ public final class IOUtil {
         newBuffer.put(buffer);
         return newBuffer;
     }
-
     /**
      * Reads the specified resource and returns the raw data as a ByteBuffer.
      *

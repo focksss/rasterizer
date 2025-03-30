@@ -1,6 +1,7 @@
 package Main;
 
 import java.io.IOException;
+import java.lang.Math;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -16,10 +17,10 @@ import ModelHandler.Material;
 import ModelHandler.Obj;
 import ModelHandler.gLTF;
 import io.github.mudbill.dds.DDSFile;
-import org.joml.Matrix4f;
-import org.joml.Vector4f;
+import org.joml.*;
 import org.lwjgl.system.MemoryUtil;
 
+import static Util.MathUtil.clamp;
 import static org.lwjgl.opengl.ARBBindlessTexture.*;
 import static org.lwjgl.opengl.ARBUniformBufferObject.glBindBufferBase;
 import static org.lwjgl.opengl.GL20.*;
@@ -37,6 +38,10 @@ public class World {
     private List<Material> worldMaterials = new ArrayList<>();
     private List<String> texturePaths = new ArrayList<>();
     private List<Long> worldTextureHandles = new ArrayList<>();
+    public static gLTF.Node selectedNode;
+    public static Vec selectedL = new Vec(); // location
+    public static Vec selectedR = new Vec(); // rotation
+    public static Vec selectedS = new Vec(); // scale
 
     public int materialSSBO, textureHandleSSBO, lightDataSSBO, shadowmapHandleSSBO;
 
@@ -270,28 +275,154 @@ public class World {
         memFree(verticesBuffer);
         worldObjects.add(newWorldObject);
     }
+    private void selectNode(gLTF.Node node) {
+        if (!(selectedNode == null)) selectedNode.toggleOutline();
+        selectedNode = node;
+        selectedNode.toggleOutline();
+        Matrix4f matrix = selectedNode.transform.get(0);
+        selectedL = new Vec(matrix.m30(), matrix.m31(), matrix.m32());
+
+        selectedS = new Vec(
+                new Vec(matrix.m00(), matrix.m01(), matrix.m02()).magnitude(),
+                new Vec(matrix.m10(), matrix.m11(), matrix.m12()).magnitude(),
+                new Vec(matrix.m20(), matrix.m21(), matrix.m22()).magnitude()
+        );
+        selectedS.updateFloats();
+        Matrix3f rotMat = new Matrix3f(
+                matrix.m00() / selectedS.xF, matrix.m01() / selectedS.xF, matrix.m02() / selectedS.xF,
+                matrix.m10() / selectedS.yF, matrix.m11() / selectedS.yF, matrix.m12() / selectedS.yF,
+                matrix.m20() / selectedS.zF, matrix.m21() / selectedS.zF, matrix.m22() / selectedS.zF
+        );
+        Quaternionf rotationQuat = new Quaternionf();
+        rotationQuat.setFromNormalized(rotMat);
+
+        Vector3f eulerRad = new Vector3f();
+        rotationQuat.getEulerAnglesXYZ(eulerRad);
+        selectedR = new Vec(
+                (float)Math.toDegrees(eulerRad.x),
+                (float)Math.toDegrees(eulerRad.y),
+                (float)Math.toDegrees(eulerRad.z)
+        );
+        selectedR.updateFloats();
+
+        selectedL.updateFloats();
+        selectedS.updateFloats();
+        ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(0)).value = selectedL.xF;
+        ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(1)).value = selectedL.yF;
+        ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(2)).value = selectedL.zF;
+        ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(3)).value = selectedR.xF;
+        ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(4)).value = selectedR.yF;
+        ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(5)).value = selectedR.zF;
+        ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(6)).value = selectedS.xF;
+        ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(7)).value = selectedS.yF;
+        ((GUI.GUISlider) GUI.objects.get(1).children.get(1).children.get(0).elements.get(8)).value = selectedS.zF;
+    }
+    public void deselect() {
+        selectedNode.toggleOutline();
+        selectedNode = null;
+    }
+    private GUI.GUIObject addNodeGUI(gLTF.Node node, float startHeight, Vec lastCol, float h) {
+        GUI.GUIObject nodeObject = new GUI.GUIObject(new Vec(0, startHeight), new Vec(1), new Vec(0, -50), new Vec(1, 100));
+        nodeObject.addElement(new GUI.GUIQuad(new Vec(lastCol.mult(0.95))));
+        nodeObject.addElement(new GUI.GUILabel(new Vec(0.05, 0.35), node.name, 0.5f, new Vec(1).sub(lastCol.mult(0.95))));
+
+        List<Runnable> nodesToggle = new ArrayList<>(); nodesToggle.add(() -> changeScroller(h -(float) (0.1 * node.children.size()))); nodesToggle.add(nodeObject::toggleChildren);
+        nodeObject.addElement(new GUI.GUIButton(new Vec(0.3, 0.1), new Vec(0.3, 0.8), new GUI.GUILabel(new Vec(0.05, 0.35), "expand/collapse", 0.3f, new Vec(1).sub(lastCol.mult(0.95))), new GUI.GUIQuad(new Vec(lastCol.mult(1-0.95))), nodesToggle, false, false));
+        nodeObject.addElement(new GUI.GUIButton(new Vec(0.65, 0.1), new Vec(0.3, 0.8), new GUI.GUILabel(new Vec(0.05, 0.35), "Select", 0.5f, new Vec(1).sub(lastCol.mult(0.95))), new GUI.GUIQuad(new Vec(lastCol.mult(1-0.95))), () -> selectNode(node), false, false));
+
+        GUI.GUIObject nodeContainer = new GUI.GUIObject(new Vec(0), new Vec(1), new Vec(-100), new Vec(200));
+        nodeObject.addChild(nodeContainer);
+        nodeObject.toggleChildren();
+
+        int cn = 1;
+        for (gLTF.Node child : node.children) {
+            nodeContainer.addChild(addNodeGUI(child, -cn, new Vec((Math.sin(cn*0.1)+1)*0.5), h));
+            cn++;
+        }
+        return nodeObject;
+    }
+    private void changeScroller(float newBottom) {
+        GUI.GUIObject sceneElements = GUI.objects.get(1).children.get(0).children.get(0);
+        GUI.GUIScroller scroller = ((GUI.GUIScroller) GUI.objects.get(1).elements.get(4));
+        float defaultH = (float) (0.85 - (0.15 * sceneElements.children.size()));
+        float defaultTotal = (1f - defaultH) + 0.05f;
+        if (scroller.totalGUI + 1.05f == newBottom) {
+            scroller.setTotalGUI(defaultTotal);
+            //System.out.println("tried to change back");
+        } else {
+            scroller.setTotalGUI((1f - newBottom*0.2f) + 0.05f);
+            //System.out.println("didnt try to change back" + scroller.barSize);
+        }
+    }
     public void addGLTF(gLTF object) {
-        worldGLTFs.add(object);
-        worldMaterials.addAll(object.mtllib);
-        int lastNumMats = worldMaterials.size();
-        worldMaterials.addAll(object.mtllib);
-        int counter = 0;
-        int numTextures = object.texturePaths.size();
-        for (String texPath : object.texturePaths) {
-            System.out.print("\rParsing texture " + counter + "/" + numTextures + " " + texPath);
-            if(!texturePaths.contains(texPath)) {
-                texturePaths.add(texPath);
-                int texture = loadTexture(texPath);
-                long handle = glGetTextureHandleARB(texture);
-                glMakeTextureHandleResidentARB(handle);
-                worldTextureHandles.add(handle);
+        if (!object.Scenes.isEmpty()) {
+            GUI.GUIObject sceneElements = GUI.objects.get(1).children.get(0).children.get(0);
+            float h = (float) (0.85 - (0.15 * sceneElements.children.size()));
+            GUI.GUIObject gLTFobj = new GUI.GUIObject(new Vec(0.05, h), new Vec(0.9, 0.1), new Vec(0, -10), new Vec(1, 20));
+            ((GUI.GUIScroller) GUI.objects.get(1).elements.get(4)).setTotalGUI((1f - h) + 0.05f); // absTop - bottom + buffer space
+            sceneElements.addChild(gLTFobj);
+            GUI.GUIQuad quad = new GUI.GUIQuad(new Vec(0.2));
+            GUI.GUIQuad quad1 = new GUI.GUIQuad(new Vec(0.1));
+            GUI.GUILabel text = new GUI.GUILabel(new Vec(0.05, 0.35), object.name, 0.5f, new Vec(1));
+            GUI.GUILabel showText = new GUI.GUILabel(new Vec(0.05, 0.25), "Toggle hidden", 0.4f, new Vec(1));
+            GUI.GUILabel expandText = new GUI.GUILabel(new Vec(0.05, 0.25), "Expand/Collapse", 0.4f, new Vec(1));
+            GUI.GUIButton show = new GUI.GUIButton(new Vec(0.3, 0.1), new Vec(0.3, 0.8), showText, quad1, object::toggleHidden, false, false);
+            gLTFobj.addElement(quad);
+            gLTFobj.addElement(text);
+            gLTFobj.addElement(show);
+
+            List<Runnable> scenesToggle = new ArrayList<>();
+            scenesToggle.add(() -> changeScroller(h - (float) (0.1 * object.Scenes.size())));
+            int c = 1;
+            for (gLTF.Scene scene : object.Scenes) {
+                GUI.GUIObject sceneObject = new GUI.GUIObject(new Vec(0, -c), new Vec(1, 1), new Vec(0, -50), new Vec(1, 100));
+                sceneObject.addElement(quad1);
+                sceneObject.addElement(new GUI.GUILabel(new Vec(0.05, 0.35), scene.name, 0.5f, new Vec(1)));
+                gLTFobj.addChild(sceneObject);
+                sceneObject.toggleShow();
+                scenesToggle.add(sceneObject::toggleShow);
+                List<Runnable> nodesToggle = new ArrayList<>(); nodesToggle.add(() -> changeScroller(h -(float) (0.1 * scene.nodes.size()))); nodesToggle.add(sceneObject::toggleChildren);
+                sceneObject.addElement(new GUI.GUIButton(new Vec(0.3, 0.1), new Vec(0.3, 0.8), expandText, quad, nodesToggle, false, false));
+
+                GUI.GUIObject nodeContainer = new GUI.GUIObject(new Vec(0), new Vec(1), new Vec(-100), new Vec(200));
+                sceneObject.addChild(nodeContainer);
+                sceneObject.toggleChildren();
+
+                int cn = 1;
+                for (gLTF.Node node : scene.nodes) {
+                    nodeContainer.addChild(addNodeGUI(node, -cn, new Vec((Math.sin(cn*0.1)+1)*0.5), h));
+                    cn++;
+                }
+                c++;
             }
-            counter++;
+            GUI.GUIButton expand = new GUI.GUIButton(new Vec(0.65, 0.1), new Vec(0.3, 0.8), expandText, quad1, scenesToggle, false, false);
+            gLTFobj.addElement(expand);
+
+
+            worldGLTFs.add(object);
+            worldMaterials.addAll(object.mtllib);
+            int lastNumMats = worldMaterials.size();
+            worldMaterials.addAll(object.mtllib);
+            int counter = 0;
+            int numTextures = object.texturePaths.size();
+            for (String texPath : object.texturePaths) {
+                System.out.print("\rParsing texture " + counter + "/" + numTextures + " " + texPath);
+                if (!texturePaths.contains(texPath)) {
+                    texturePaths.add(texPath);
+                    int texture = loadTexture(texPath);
+                    long handle = glGetTextureHandleARB(texture);
+                    glMakeTextureHandleResidentARB(handle);
+                    worldTextureHandles.add(handle);
+                }
+                counter++;
+            }
+            for (gLTF.Mesh mesh : object.Meshes) {
+                mesh.initialize(lastNumMats);
+            }
+            addLightsForScene(object, 0, 0.5f);
+            System.out.print("\rloaded object");
+            System.out.println();
         }
-        for (gLTF.Mesh mesh : object.Meshes) {
-            mesh.initialize(lastNumMats);
-        }
-        System.out.println();
     }
     public void addLightsForObject(worldObject obj, float minDist) {
         Obj object = obj.object;
