@@ -416,6 +416,7 @@ public class gLTF {
         public String name;
         public Mesh mesh = null;
         public List<Matrix4f> transform = new ArrayList<>();
+        public List<Matrix4f> centerTransform = new ArrayList<>();
         public List<Node> children = new ArrayList<>();
         public List<Integer> childrenIndices = new ArrayList<>();
         public boolean show = true;
@@ -425,23 +426,27 @@ public class gLTF {
             this.name = name;
             this.mesh = mesh;
             this.transform.add(transform);
+            this.centerTransform.add(new Matrix4f().identity());
         }
         public Node(String name, List<Integer> children, Matrix4f transform) {
             this.name = name;
             this.childrenIndices = children;
             this.transform.add(transform);
+            this.centerTransform.add(new Matrix4f().identity());
         }
         public Node(String name, List<Integer> children, Mesh mesh, Matrix4f transform) {
             this.name = name;
             this.childrenIndices = children;
             this.mesh = mesh;
             this.transform.add(transform);
+            this.centerTransform.add(new Matrix4f().identity());
         }
         public Node(String name, List<Integer> children, Mesh mesh, Matrix4f transform, boolean show) {
             this.name = name;
             this.childrenIndices = children;
             this.mesh = mesh;
             this.transform.add(transform);
+            this.centerTransform.add(new Matrix4f().identity());
             this.show = show;
         }
         public void toggleVis() {show = !show;}
